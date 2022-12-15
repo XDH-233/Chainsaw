@@ -40,7 +40,19 @@ null
 
 # draft
 src/main/scala/draft.sc
+src/main/scala/draft.scala
 
 # private project
 src/main/scala/Chainsaw/project/das
 /leetcode/
+
+#vscode and metals
+.bloop
+.metals
+project/project
+project/metals.sbt
+
+
+# format config
+.scalafix.conf
+.scalafmt.conf
