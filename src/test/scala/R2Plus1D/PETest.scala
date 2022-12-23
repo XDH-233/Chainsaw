@@ -1,16 +1,16 @@
 package R2Plus1D
 
-import Chainsaw.xilinx.{VivadoImpl, VivadoSynth}
 import org.scalatest.flatspec.AnyFlatSpec
 import spinal.core._
 import spinal.core.sim._
+import Chainsaw.xilinx._
 
 import scala.language.postfixOps
 import scala.util.Random.nextInt
 
 case class PETest() extends AnyFlatSpec {
 
-  "PE" should "consume 4608 DSPs" in VivadoImpl(PE(uic = 64, uoc = 144), "PE")
+  "PE" should "consume 4608 DSPs" in MyVivadoAction(PE(uic = 32, uoc = 12), "PE", SYNTH)
 
   "PE sim" should "work normally" in SimConfig.withFstWave
     .withConfig(

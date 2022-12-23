@@ -40,7 +40,6 @@ case class PE(uic: Int, uoc: Int, width: Int = 8, DSPLatency: Int = 2, adderTree
   def PELatency: Int = {
     val levels           = log2Up(uic)
     val adderTreeLatency = if (levels % 3 == 0) levels / 3 - 1 else levels / 3
-    adderTreeLatency + DSPLatency
     if (adderTreePipe) adderTreeLatency + DSPLatency else DSPLatency
   }
 }

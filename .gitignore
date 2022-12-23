@@ -55,4 +55,8 @@ project/metals.sbt
 
 # format config
 .scalafix.conf
-.scalafmt.conf
+
+
+# macOS file system
+*DS_Store
+*.html
