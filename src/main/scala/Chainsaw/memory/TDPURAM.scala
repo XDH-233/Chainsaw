@@ -160,6 +160,5 @@ begin
    doutb <= mem_pipe_regb[NBPIPE-1];
 end
 
-						
 endmodule		""")
 }
