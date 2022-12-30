@@ -10,7 +10,7 @@ import spinal.lib.bus.regif.{AxiLite4BusInterface, HtmlGenerator, RegInst}
 
 case class HostController() extends Component { // TODO
   val io = new Bundle {
-    val lite: AxiLite4 = slave(AxiLite4(AxiLite4Config(7, 32)))
+    val lite: AxiLite4 = slave(AxiLite4(AxiLite4Config(7, 32))) // 总线的地址位宽为7 位，数据位宽位32位
   }
   val busInterface: AxiLite4BusInterface = AxiLite4BusInterface(io.lite, (1, 1), "config")
 

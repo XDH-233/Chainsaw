@@ -1,9 +1,5 @@
 package R2Plus1D
 import spinal.core._
-import spinal.core.sim._
-import spinal.lib._
-import Chainsaw._
-import Chainsaw.xilinx._
 import Chainsaw.memory._
 
 import scala.language.postfixOps
