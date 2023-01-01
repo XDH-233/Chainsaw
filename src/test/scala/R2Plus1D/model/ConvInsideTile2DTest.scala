@@ -1,10 +1,10 @@
-package R2Plus1D
+package R2Plus1D.model
 
 class ConvInsideTile2DTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   it should "work normally" in { // attention: it will consume about 6 minutes
     val config: ConvInsideTile2DConfig =
-      ConvInsideTile2DConfig(Uic = 56, Uc = 128, Tic = 64, Tc = 144, Nid = 15, Nihw = 56, Nod = 15, Nohw = 56, Krs = 3, stride = 1, padding = 1)
+      ConvInsideTile2DConfig(Uic = 56, Uc = 128, Nic = 64, Tc = 144, Nd = 15, Nihw = 56, Nohw = 56, Krs = 3, stride = 1, padding = 1)
     val conv2D = ConvInsideTile2D(config)
 
     val ifMap  = conv2D.randIfMap()

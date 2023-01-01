@@ -1,13 +1,12 @@
-package R2Plus1D
+package R2Plus1D.model
 
-case class ConvInsideTile2DConfig(
+case class ConvInsideTile2DConfig( // FIXME
     val Uic:     Int,
     val Uc:      Int,
-    val Tic:     Int,
+    val Nic:     Int,
     val Tc:      Int,
-    val Nid:     Int,
+    val Nd:      Int,
     val Nihw:    Int,
-    val Nod:     Int,
     val Nohw:    Int,
     val Krs:     Int,
     val stride:  Int,
