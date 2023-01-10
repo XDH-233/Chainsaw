@@ -21,19 +21,18 @@ class LoopInsideTileTest extends org.scalatest.flatspec.AnyFlatSpec {
       import dut._
       dut.clockDomain.forkStimulus(10)
       io.loadConfig #= false
-      io.Toc        #= 0
+      io.Tc         #= 0
       io.Nihw       #= 0
-      io.Nid        #= 0
-      io.Tic        #= 0
+      io.Nd         #= 0
+      io.Nic        #= 0
       io.Krs        #= 0
       clockDomain.waitSampling()
       io.loadConfig  #= true
-      io.Toc         #= 144
-      io.Nid         #= 16
+      io.Tc          #= 144
+      io.Nd          #= 16
       io.Nihw        #= 56
-      io.Nod         #= 16
       io.Nohw        #= 56
-      io.Tic         #= 64
+      io.Nic         #= 64
       io.Krs         #= 3
       io.Stride      #= true
       io.paddingSize #= 1

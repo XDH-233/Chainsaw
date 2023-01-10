@@ -1,10 +1,17 @@
 package R2Plus1D
 import spinal.core._
 object Parameter {
-  val Uic = 64
-  val Uc  = 128
-  val Uoc = 48
-  val featureMapBufferAddrWidth: Int = log2Up(49 * 1024) // 49 K
-  val weightBuffer2DAddrWidth:   Int = log2Up(20736) // 20.25 K
-  val outputBufferAddrWidth:     Int = log2Up(56448) // 55.125 K
+  val Uic   = 36
+  val Uc    = 144
+  val Uoc   = 36
+  val WIDTH = 8
+
+  val featureMapDepth: Int = 100 * 1024 // 100k
+
+  val weightBuffer2DDepth: Int = 152 * 1024 // 152k
+  val weightBuffer1Depth:  Int = 16 * 1024 // 16k
+
+  val ifMapSizeMax2D: Int = 16 * 112 * 112
+  val ifMapSizeMax1D: Int = 16 * 56 * 56
+
 }

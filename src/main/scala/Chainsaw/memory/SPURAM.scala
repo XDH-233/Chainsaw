@@ -20,6 +20,21 @@ case class SPURAM(width: Int, depth: Int, readLatency: Int, singlePortMode: Read
   addGenerics(("DWIDTH", width), ("DEPTH", depth), ("NBPIPE", readLatency - 1))
   mapClockDomain(clock = io.clk, reset = io.reset)
 
+  def read(en: Bool, addr: UInt, data: Bits) = {
+    io.mem_en := en
+    io.we.clear()
+    io.din.clearAll()
+    io.addr := addr
+    data    := io.dout
+  }
+
+  def write(en: Bool, we: Bool, addr: UInt, data: Bits) = {
+    io.mem_en := en
+    io.we     := we
+    io.din    := data
+    io.addr   := addr
+  }
+
   singlePortMode match {
     case NO_CHANGE => setInlineVerilog("""
                                            |module SPURAM(

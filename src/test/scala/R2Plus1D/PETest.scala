@@ -10,7 +10,9 @@ import scala.util.Random.nextInt
 
 case class PETest() extends AnyFlatSpec {
 
-  "PE" should "consume 4608 DSPs" in MyVivadoAction(PE(uic = 32, uoc = 12), "PE", SYNTH)
+  "PE 2D" should "consume 4608 DSPs" in MyVivadoAction(PE(uic = 64, uoc = 128), "PE", SYNTH)
+
+  "PE 1D" should "consume 4608 DSPs" in MyVivadoAction(PE(uic = 128, uoc = 64), "PE", IMPL)
 
   "PE sim" should "work normally" in SimConfig.withFstWave
     .withConfig(
@@ -20,24 +22,21 @@ case class PETest() extends AnyFlatSpec {
       )
     )
     .compile {
-      val dut: PE = PE(uic = 64, uoc = 114)
+      val dut: PE = PE(uic = 128, uoc = 64)
       dut
     }
     .doSim { dut: PE =>
       import dut._
       dut.clockDomain.forkStimulus(10)
-      io.ifMap.foreach((_: UInt)  #= 0)
+      io.ifMap.foreach((_: UInt) #= 0)
       io.weight.foreach((_: UInt) #= 0)
-      io.clr                      #= false
-      io.enable                   #= false
       clockDomain.waitSampling()
       (0 until 100).foreach { _: Int =>
-        io.clr #= nextInt(10) == 5
-        io.enable.randomize()
-        io.ifMap.foreach((_: UInt)  #= nextInt(10))
+        io.ifMap.foreach((_: UInt) #= nextInt(10))
         io.weight.foreach((_: UInt) #= nextInt(10))
         clockDomain.waitSampling()
       }
+      println(dut.PELatency)
     }
 
 }

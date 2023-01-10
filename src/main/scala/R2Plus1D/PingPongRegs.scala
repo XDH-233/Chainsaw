@@ -37,7 +37,5 @@ case class PingPongRegs(uic: Int = 64, uoc: Int = 128, width: Int = 8) extends C
       regs.last.head := io.weightIn
       regs.last.init.zip(regs.last.tail).foreach { case (l, r) => r := l }
     }
-
   }
-
 }

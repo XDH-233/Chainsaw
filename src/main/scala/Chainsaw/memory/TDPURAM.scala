@@ -5,26 +5,80 @@ import Chainsaw.xilinx._
 import spinal.core._
 import scala.language.postfixOps
 
-case class TDPURAM(width: Int, depth: Int, readLatency: Int) extends BlackBox {
+case class TDPURAM(width: Int, depth: Int, readLatency: Int = 4) extends BlackBox {
   val io = new Bundle {
-    val clk = in Bool () // Clock
+    val clk:   Bool = in Bool () // Clock
+    val reset: Bool = in Bool () // no use, just for simulation
 // Port A
-    val wea     = in Bool () // Write Enable
-    val mem_ena = in Bool () // Memory Enable
-    val dina    = in Bits (width bits) // Data Input
-    val addra   = in UInt (log2Up(depth) bits) // Address Input
-    val douta   = out Bits (width bits) // Data Output
+    val wea:     Bool = in Bool () // Write Enable
+    val mem_ena: Bool = in Bool () // Memory Enable
+    val dina:    Bits = in Bits (width bits) // Data Input
+    val addra:   UInt = in UInt (log2Up(depth) bits) // Address Input
+    val douta:   Bits = out Bits (width bits) // Data Output
 
 // Port B
-    val web     = in Bool () // Write Enable
-    val mem_enb = in Bool () // Memory Enable
-    val dinb    = in Bits (width bits) // Data Input
-    val addrb   = in UInt (log2Up(depth) bits) // Address Input
-    val doutb   = out Bits (width bits) // Data Output
+    val web:     Bool = in Bool () // Write Enable
+    val mem_enb: Bool = in Bool () // Memory Enable
+    val dinb:    Bits = in Bits (width bits) // Data Input
+    val addrb:   UInt = in UInt (log2Up(depth) bits) // Address Input
+    val doutb:   Bits = out Bits (width bits) // Data Output
   }
 
   noIoPrefix()
-  mapClockDomain(clock = io.clk)
+  mapClockDomain(clock = io.clk, reset = io.reset)
+
+  def portWrite(en: Bool, we: Bool, addr: UInt, data: Bits, name: String): Unit = {
+    name match {
+      case "a" => {
+        io.mem_ena := en
+        io.wea     := we
+        io.addra   := addr
+        io.dina    := data
+      }
+      case "b" => {
+        io.mem_enb := en
+        io.web     := we
+        io.addrb   := addr
+        io.dinb    := data
+      }
+    }
+  }
+
+  def portClose(name: String): Unit = {
+    name match {
+      case "a" => {
+        io.wea.clear()
+        io.dina.clearAll()
+        io.mem_ena.clear()
+        io.addra.clearAll()
+      }
+      case "b" => {
+        io.web.clear()
+        io.dinb.clearAll()
+        io.mem_enb.clear()
+        io.addrb.clearAll()
+      }
+    }
+  }
+
+  def portRead(en: Bool, addr: UInt, data: Bits, name: String) = {
+    name match {
+      case "a" => {
+        io.mem_ena := en
+        io.addra   := addr
+        io.wea.clear()
+        io.dina.clearAll()
+        data := io.douta
+      }
+      case "b" => {
+        io.mem_enb := en
+        io.addrb   := addr
+        io.web.clear()
+        io.dinb.clearAll()
+        data := io.doutb
+      }
+    }
+  }
 
   addGenerics(("DEPTH", depth), ("DWIDTH", width), ("NBPIPE", readLatency - 1))
 
@@ -40,6 +94,7 @@ case class TDPURAM(width: Int, depth: Int, readLatency: Int) extends BlackBox {
 
 module TDPURAM(
 input clk,                   // Clock 
+input reset,
 // Port A
 input wea,                     // Write Enable
 input mem_ena,                // Memory Enable
@@ -161,4 +216,25 @@ begin
 end
 
 endmodule		""")
+}
+
+object TDPURAM {
+  def apply(portA: SimpleDualPort, portB: SimpleDualPort): TDPURAM = {
+    val ret = TDPURAM(portA.width, portA.depth)
+    ret.io.mem_ena := portA.en
+    ret.io.mem_enb := portB.en
+
+    ret.io.wea := portA.we
+    ret.io.web := portB.we
+
+    ret.io.addra := portA.addr
+    ret.io.addrb := portB.addr
+
+    ret.io.dina := portA.wData
+    ret.io.dinb := portB.wData
+
+    portA.rData := ret.io.douta
+    portB.rData := ret.io.doutb
+    ret
+  }
 }

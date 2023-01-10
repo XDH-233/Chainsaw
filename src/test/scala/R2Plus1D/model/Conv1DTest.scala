@@ -1,10 +1,10 @@
 package R2Plus1D.model
 
-class ConvInsideTile1DTest extends org.scalatest.flatspec.AnyFlatSpec {
+class Conv1DTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   it should "work without err" in {
-    val config = ConvInsideTile1DConfig(Uic = 2, Uc = 4, Uoc = 2, Tc = 5, Noc = 3, Nid = 5, Nhw = 2, Nod = 3, Kt = 3, stride = 2, padding = 1)
-    val conv1D = ConvInsideTile1D(config)
+    val config = Conv1DConfig(Uc = 2, Uoc = 2, Nc = 3, Noc = 3, Nid = 5, Nhw = 2, Nod = 3, Kt = 3, stride = 2, padding = 1)
+    val conv1D = Conv1D(config)
     val ifMap  = conv1D.randomIfMap
     val weight = conv1D.randomWeight
 

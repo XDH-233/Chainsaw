@@ -1,10 +1,9 @@
 package R2Plus1D.model
 
-case class ConvInsideTile1DConfig(
-    val Uic:     Int,
+case class Conv1DConfig(
     val Uc:      Int,
     val Uoc:     Int,
-    val Tc:      Int,
+    val Nc:      Int,
     val Noc:     Int,
     val Nid:     Int,
     val Nhw:     Int,
