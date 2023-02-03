@@ -8,7 +8,7 @@ case class Conv2D(config: Conv2DConfig) {
   private val ifMapSize:  Int = Nd * Nihw * Nihw
   private val kernelSize: Int = Krs * Krs
   private val ofMapSize:  Int = Nd * Nohw * Nohw
-  private val NowhTile = sqrt(Uc / 2).toInt
+  private val NowhTile = sqrt(Uc / 2).ceil.toInt
 
   def randIfMap():  Array[Array[Array[Array[Int]]]] = Array.fill(Nic)(Array.fill(Nihw)(Array.fill(Nihw)(Array.fill(Nd)(nextInt(10)))))
   def randWeight(): Array[Array[Array[Array[Int]]]] = Array.fill(Nc)(Array.fill(Nic)(Array.fill(Krs)(Array.fill(Krs)(nextInt(10)))))
@@ -49,7 +49,7 @@ case class Conv2D(config: Conv2DConfig) {
     ofMapTile
   }
 
-  def ifMap2Tile(ifMap: Array[Array[Array[Array[Int]]]]): Array[Array[Int]] = { // ic -> ih -> iw -> id
+  def ifMap2Mem(ifMap: Array[Array[Array[Array[Int]]]]): Array[Array[Int]] = { // ic -> ih -> iw -> id
     val ret = Array.fill(divideCeil(Nic, Uic) * ifMapSize)(Array.fill(Uic)(0))
     for (ic <- 0 until Nic; ih <- 0 until Nihw; iw <- 0 until Nihw; id <- 0 until Nd) {
       ret((ic / Uic) * ifMapSize + ih * Nihw * Nd + iw * Nd + id)(ic % Uic) = ifMap(ic)(ih)(iw)(id)
@@ -57,7 +57,7 @@ case class Conv2D(config: Conv2DConfig) {
     ret
   }
 
-  def weight2Tile(weight: Array[Array[Array[Array[Int]]]]): Array[Array[Int]] = { // oc -> ic -> r -> s
+  def weight2Mem(weight: Array[Array[Array[Array[Int]]]]): Array[Array[Int]] = { // oc -> ic -> r -> s
     val ret = Array.fill(divideCeil(Nic, Uic) * divideCeil(Nc, Uc) * kernelSize * Uc)(Array.fill(Uic)(0))
     for (oc <- 0 until Nc; ic <- 0 until Nic; kr <- 0 until Krs; ks <- 0 until Krs) {
       ret((oc / Uc) * divideCeil(Nic, Uic) * kernelSize * Uc + (ic / Uic) * kernelSize * Uc + kr * Uc * Krs + ks * Uc + (Uc - 1 - oc % Uc))(
@@ -67,7 +67,7 @@ case class Conv2D(config: Conv2DConfig) {
     ret
   }
 
-  def ofMap2Tile(ofMap: Array[Array[Array[Array[Int]]]]): Array[Array[Int]] = {
+  def ofMap2Mem(ofMap: Array[Array[Array[Array[Int]]]]): Array[Array[Int]] = {
     val ret = Array.fill(divideCeil(Nc, Uc) * ofMapSize)(Array.fill(Uc)(0))
     for (oc <- 0 until Nc; oh <- 0 until Nohw; ow <- 0 until Nohw; od <- 0 until Nd) {
       ret((oc / Uc) * ofMapSize + oh * Nohw * Nd + ow * Nd + od)(oc % Uc) = ofMap(oc)(oh)(ow)(od)

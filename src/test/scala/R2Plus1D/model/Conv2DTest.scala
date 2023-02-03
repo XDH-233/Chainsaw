@@ -22,9 +22,9 @@ class Conv2DTest extends org.scalatest.flatspec.AnyFlatSpec {
     //     ic.foreach(kr => println(kr.mkString(" ")))
     //   }
     // }
-    val loopUnrollRes = conv2D.loopUnroll(conv2D.ifMap2Tile(ifMap), conv2D.weight2Tile(weight))
+    val loopUnrollRes = conv2D.loopUnroll(conv2D.ifMap2Mem(ifMap), conv2D.weight2Mem(weight))
     val loopRes       = conv2D.loop(ifMap, weight)
-    val loopRes2Tile  = conv2D.ofMap2Tile(loopRes)
+    val loopRes2Tile  = conv2D.ofMap2Mem(loopRes)
 
     println("-------------------------unroll result-------------------------------------------")
     loopUnrollRes.foreach(o => println(o.mkString(" ")))

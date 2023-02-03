@@ -22,9 +22,9 @@ case class FeatureMapBuffer(width: Int = 512, depth: Int = 50176, readLatency: I
     val rData1DPE: Bits = out Bits (width bits)
   }
 
-  val urams = Seq.fill(2)(TDPURAM(width = width, depth = depth))
+  val urams: Seq[TDPURAM] = Seq.fill(2)(TDPURAM(width = width, depth = depth))
 
-  val state = RegInit(False) // 0 -> read urams0, write urams1
+  val state: Bool = RegInit(False) // 0 -> read urams0, write urams1
   state.toggleWhen(io.switch)
 
   when(state) { // read urams1, write urams0

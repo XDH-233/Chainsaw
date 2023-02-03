@@ -14,9 +14,9 @@ case class PE(uic: Int, uoc: Int, width: Int = 8, DSPLatency: Int = 2, adderTree
   require(uoc % 2 == 0 && uic % 2 == 0)
 
   val io = new Bundle {
-    val ifMap:      Vec[UInt] = in Vec (UInt(width bits), uic)
-    val weight:     Vec[UInt] = in Vec (UInt(width bits), uic * uoc) // uoc 行，uic 列
-    val partialSum: Vec[UInt] = out Vec (UInt(log2Up(uic) + width * 2 bits), uoc)
+    val ifMap:      Vec[SInt] = in Vec (SInt(width bits), uic)
+    val weight:     Vec[SInt] = in Vec (SInt(width bits), uic * uoc) // uoc 行，uic 列
+    val partialSum: Vec[SInt] = out Vec (SInt(log2Up(uic) + width * 2 bits), uoc)
   }
 
   val dspArray: Array[Array[Multiplier]] =
@@ -24,7 +24,7 @@ case class PE(uic: Int, uoc: Int, width: Int = 8, DSPLatency: Int = 2, adderTree
       Multiplier(io.ifMap(j), io.weight(i * 2 * uic + j), io.weight((i * 2 + 1) * uic + j), DSPLatency) addAttribute ("use_dsp", "yes")
     )
 
-  val sums: Array[UInt] =
+  val sums: Array[SInt] =
     Array.tabulate(uoc)((u: Int) =>
       Vec(dspArray(u / 2).map((_: Multiplier).io.p(u % 2)))
         .reduceBalancedTree(_ +^ _, (s, l) => if (adderTreePipe && (l + 1) % 3 == 0 && (l + 1) != log2Up(uic)) RegNext(s) else s)
