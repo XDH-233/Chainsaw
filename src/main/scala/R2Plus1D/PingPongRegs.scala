@@ -1,14 +1,19 @@
 package R2Plus1D
 
 import spinal.core._
+import spinal.lib.fsm._
 
 import scala.language.postfixOps
 
 case class PingPongRegs(uic: Int = 64, uoc: Int = 128, width: Int = 8) extends Component {
   val io = new Bundle {
+    val weightBufferRdy = in Bool ()
+    val weightLoadedNum = in UInt ()
+
     val weightIn:  Bits      = in Bits (uic * width bits)
     val switch:    Bool      = in Bool ()
     val load:      Bool      = in Bool ()
+    val rdy:       Bool      = out Bool ()
     val weightOut: Vec[Bits] = out Vec (Bits(uic * width bits), uoc)
   }
 
@@ -37,5 +42,13 @@ case class PingPongRegs(uic: Int = 64, uoc: Int = 128, width: Int = 8) extends C
       regs.last.head := io.weightIn
       regs.last.init.zip(regs.last.tail).foreach { case (l, r) => r := l }
     }
+  }
+
+  val FSM = new StateMachine {
+    val void      = new State with EntryPoint
+    val oneFilled = new State
+    val Full      = new State
+
+    void.whenIsActive {}
   }
 }

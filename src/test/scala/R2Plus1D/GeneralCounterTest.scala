@@ -5,7 +5,7 @@ import spinal.core.sim._
 
 import scala.language.postfixOps
 
-class LoopAccTest extends org.scalatest.flatspec.AnyFlatSpec {
+class GeneralCounterTest extends org.scalatest.flatspec.AnyFlatSpec {
   it should "work right" in {
     case class Acc() extends Component {
       val io = new Bundle {
@@ -14,9 +14,9 @@ class LoopAccTest extends org.scalatest.flatspec.AnyFlatSpec {
         val value: UInt = out UInt (32 bits)
       }
 
-      val acc: LoopAcc = LoopAcc()
+      val acc: GeneralCounter = GeneralCounter()
 
-      acc.load(io.load, U(10), U(98))
+      acc.load(io.load, U(1), U(28))
       when(io.inc) {
         acc.inc()
       }
@@ -45,7 +45,7 @@ class LoopAccTest extends org.scalatest.flatspec.AnyFlatSpec {
         io.load #= false
         clockDomain.waitSampling()
         clockDomain.waitSampling()
-        (0 until 100).foreach { _ =>
+        (0 until 1000).foreach { _ =>
           io.inc.randomize()
           clockDomain.waitSampling()
         }

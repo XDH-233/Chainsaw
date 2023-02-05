@@ -4,7 +4,7 @@ import spinal.core.sim._
 import scala.language.postfixOps
 import Chainsaw.xilinx._
 
-class LoopInsideTileTest extends org.scalatest.flatspec.AnyFlatSpec {
+class LoopCtrl2DTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   it should "work right" in SimConfig.withFstWave
     .withConfig(
@@ -14,31 +14,31 @@ class LoopInsideTileTest extends org.scalatest.flatspec.AnyFlatSpec {
       )
     )
     .compile {
-      val dut = LoopInsideTile2D()
+      val dut = LoopCtrl2D()
       dut
     }
     .doSim { dut =>
       import dut._
       dut.clockDomain.forkStimulus(10)
-      io.loadConfig #= false
-      io.Tc         #= 0
-      io.Nihw       #= 0
-      io.Nd         #= 0
-      io.Nic        #= 0
-      io.Krs        #= 0
-      clockDomain.waitSampling()
-      io.loadConfig  #= true
-      io.Tc          #= 144
-      io.Nd          #= 16
-      io.Nihw        #= 56
-      io.Nohw        #= 56
+
       io.Nic         #= 64
+      io.Nc          #= 128
+      io.Nd          #= 3
+      io.Nohw        #= 8
       io.Krs         #= 3
-      io.Stride      #= true
-      io.paddingSize #= 1
+      io.Toh         #= 3
+      io.Tow         #= 3
+      io.loadConfig  #= false
+      io.PEDone      #= false
+      io.NcDUcCeil   #= 2
+      io.NicDUicCeil #= 2
+      clockDomain.waitSampling()
+      io.loadConfig #= true
       clockDomain.waitSampling()
       io.loadConfig #= false
-      clockDomain.waitSampling(10)
+      clockDomain.waitSampling()
+      io.PEDone #= true
+      clockDomain.waitSampling(10000)
     }
 
 }

@@ -8,7 +8,7 @@ case class Conv2D(config: Conv2DConfig) {
   private val ifMapSize:  Int = Nd * Nihw * Nihw
   private val kernelSize: Int = Krs * Krs
   private val ofMapSize:  Int = Nd * Nohw * Nohw
-  private val NowhTile = sqrt(Uc / 2).ceil.toInt
+  private val Tohw = sqrt(Uc / Nd).ceil.toInt
 
   def randIfMap():  Array[Array[Array[Array[Int]]]] = Array.fill(Nic)(Array.fill(Nihw)(Array.fill(Nihw)(Array.fill(Nd)(nextInt(10)))))
   def randWeight(): Array[Array[Array[Array[Int]]]] = Array.fill(Nc)(Array.fill(Nic)(Array.fill(Krs)(Array.fill(Krs)(nextInt(10)))))
@@ -16,15 +16,15 @@ case class Conv2D(config: Conv2DConfig) {
   def loopUnroll(ifMapTile: Array[Array[Int]], weightTile: Array[Array[Int]]): Array[Array[Int]] = {
     val ofMapTile = Array.fill(divideCeil(Nc, Uc) * ofMapSize)(Array.fill(Uc)(0))
     for (to <- 0 until divideCeil(Nc, Uc); ti <- 0 until divideCeil(Nic, Uic)) {
-      for (th <- 0 until divideCeil(Nohw, NowhTile); tw <- 0 until divideCeil(Nihw, NowhTile)) {
+      for (th <- 0 until divideCeil(Nohw, Tohw); tw <- 0 until divideCeil(Nihw, Tohw)) {
         for (kr <- 0 until Krs; ks <- 0 until Krs) {
-          for (sth <- 0 until NowhTile) {
-            if (th * NowhTile + sth < Nohw) {
-              for (stw <- 0 until NowhTile) {
-                if (tw * NowhTile + stw < Nohw) {
+          for (sth <- 0 until Tohw) {
+            if (th * Tohw + sth < Nohw) {
+              for (stw <- 0 until Tohw) {
+                if (tw * Tohw + stw < Nohw) {
                   for (od <- 0 until Nd) {
-                    val ox = th * NowhTile + sth
-                    val oy = tw * NowhTile + stw
+                    val ox = th * Tohw + sth
+                    val oy = tw * Tohw + stw
                     val ix = ox * stride + kr - padding
                     val iy = oy * stride + ks - padding
 
@@ -103,8 +103,8 @@ case class Conv2D(config: Conv2DConfig) {
 
   private def ifMapAddr(ti: Int, th: Int, tw: Int, kr: Int, ks: Int, sth: Int, stw: Int, od: Int): Int =
     ti * ifMapSize +
-      th * stride * Nihw * Nd * NowhTile +
-      tw * NowhTile * stride * Nd +
+      th * stride * Nihw * Nd * Tohw +
+      tw * Tohw * stride * Nd +
       kr * Nihw * Nd + ks * Nd +
       sth * stride * Nihw * Nd +
       stw * stride * Nd +
@@ -112,8 +112,8 @@ case class Conv2D(config: Conv2DConfig) {
 
   private def ofMapAddr(to: Int, th: Int, tw: Int, sth: Int, stw: Int, od: Int): Int =
     to * ofMapSize +
-      th * NowhTile * Nohw * Nd +
-      tw * NowhTile * Nd +
+      th * Tohw * Nohw * Nd +
+      tw * Tohw * Nd +
       sth * Nohw * Nd +
       stw * Nd +
       od
