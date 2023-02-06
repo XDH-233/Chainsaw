@@ -6,7 +6,7 @@ import scala.language.postfixOps
 case class GeneralCounter(valueWidth: Int = 32, stepWidth: Int = 16, topWidth: Int = 32) extends ImplicitArea[UInt] {
 
   val valueNext: UInt = UInt(valueWidth bits)
-  val value:     UInt = RegNext(valueNext)
+  val value:     UInt = RegNext(valueNext) init (0)
   val step:      UInt = Reg(UInt(stepWidth bits))
   val top:       UInt = Reg(UInt(topWidth bits))
 

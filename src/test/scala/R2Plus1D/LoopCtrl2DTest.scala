@@ -6,6 +6,8 @@ import Chainsaw.xilinx._
 
 class LoopCtrl2DTest extends org.scalatest.flatspec.AnyFlatSpec {
 
+  "loopCtrl2D" should "run in high frequency" in MyVivadoAction(LoopCtrl2D(), "loop_ctrl_2D", SYNTH)
+
   it should "work right" in SimConfig.withFstWave
     .withConfig(
       SpinalConfig(
@@ -21,8 +23,8 @@ class LoopCtrl2DTest extends org.scalatest.flatspec.AnyFlatSpec {
       import dut._
       dut.clockDomain.forkStimulus(10)
 
-      io.Nic         #= 64
-      io.Nc          #= 128
+      io.Nic         #= 64 // Uic = 36
+      io.Nc          #= 380 // Uc = 144
       io.Nd          #= 3
       io.Nohw        #= 8
       io.Krs         #= 3
@@ -30,8 +32,9 @@ class LoopCtrl2DTest extends org.scalatest.flatspec.AnyFlatSpec {
       io.Tow         #= 3
       io.loadConfig  #= false
       io.PEDone      #= false
-      io.NcDUcCeil   #= 2
+      io.NcDUcCeil   #= 3
       io.NicDUicCeil #= 2
+      io.kernelSize  #= 9
       clockDomain.waitSampling()
       io.loadConfig #= true
       clockDomain.waitSampling()
