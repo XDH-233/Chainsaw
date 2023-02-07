@@ -5,44 +5,42 @@ import util.Random.nextInt
 case class Conv2D(config: Conv2DConfig) {
   import config._
 
-  private val ifMapSize:  Int = Nd * Nihw * Nihw
-  private val kernelSize: Int = Krs * Krs
-  private val ofMapSize:  Int = Nd * Nohw * Nohw
-  private val Tohw = sqrt(Uc / Nd).ceil.toInt
+  private val ofMapSize: Int = Nd * Nohw * Nohw
 
   def randIfMap():  Array[Array[Array[Array[Int]]]] = Array.fill(Nic)(Array.fill(Nihw)(Array.fill(Nihw)(Array.fill(Nd)(nextInt(10)))))
   def randWeight(): Array[Array[Array[Array[Int]]]] = Array.fill(Nc)(Array.fill(Nic)(Array.fill(Krs)(Array.fill(Krs)(nextInt(10)))))
 
   def loopUnroll(ifMapTile: Array[Array[Int]], weightTile: Array[Array[Int]]): Array[Array[Int]] = {
+
     val ofMapTile = Array.fill(divideCeil(Nc, Uc) * ofMapSize)(Array.fill(Uc)(0))
     for (to <- 0 until divideCeil(Nc, Uc); ti <- 0 until divideCeil(Nic, Uic)) {
-      for (th <- 0 until divideCeil(Nohw, Tohw); tw <- 0 until divideCeil(Nihw, Tohw)) {
+      for (th <- Range(0, Nohw, Toh); tw <- Range(0, Nohw, Tow)) {
         for (kr <- 0 until Krs; ks <- 0 until Krs) {
-          for (sth <- 0 until Tohw) {
-            if (th * Tohw + sth < Nohw) {
-              for (stw <- 0 until Tohw) {
-                if (tw * Tohw + stw < Nohw) {
+          val weightAddrHead: Int = weightAddr(to, ti, kr, ks)
+          for (sth <- 0 until Toh) {
+            if (th + sth < Nohw) {
+              for (stw <- 0 until Tow) {
+                if (tw + stw < Nohw) {
                   for (od <- 0 until Nd) {
-                    val ox = th * Tohw + sth
-                    val oy = tw * Tohw + stw
+                    val ox = th + sth
+                    val oy = tw + stw
                     val ix = ox * stride + kr - padding
                     val iy = oy * stride + ks - padding
+                    val ifAddr: Int        = ifMapAddr(ti, th, tw, kr, ks, sth, stw, od)
+                    val ifMap:  Array[Int] = if (ix < 0 || ix >= Nihw || iy < 0 || iy >= Nihw) Array.fill(Uic)(0) else ifMapTile(ifAddr)
 
-                    val ifAddr:         Int               = ifMapAddr(ti, th, tw, kr, ks, sth, stw, od)
-                    val ifMap:          Array[Int]        = if (ix < 0 || ix >= Nihw || iy < 0 || iy >= Nihw) Array.fill(Uic)(0) else ifMapTile(ifAddr)
-                    val weightAddrHead: Int               = weightAddr(to, ti, kr, ks)
-                    val weight:         Array[Array[Int]] = Array.tabulate(Uc)(o => weightTile(weightAddrHead + o)).reverse
-                    val psum:           Array[Int]        = PEArray(ifMap, weight)
+                    val weight: Array[Array[Int]] = Array.tabulate(Uc)(o => weightTile(weightAddrHead + o)).reverse
+                    val psum:   Array[Int]        = PEArray(ifMap, weight)
                     val ofAddr = ofMapAddr(to, th, tw, sth, stw, od)
                     psum.zipWithIndex.foreach { case (p, i) => ofMapTile(ofAddr)(i) += p }
-
+                    println("-" * 100)
+                    printf(f"od: $od%-4d stw: $stw%-4d sth: $sth%-4d ks: $ks%-4d kr: $kr%-4d tw: $tw%-4d th: $th%-4d ti: $ti%-4d to: $to%-4d\n")
+                    printf(f"ix: $ix%-4d iy: $iy%-4d ifAddr: $ifAddr%-5d weightAddrHead: $weightAddrHead%-5d\n")
                   }
                 }
               }
             }
-
           }
-
         }
       }
     }
@@ -103,8 +101,8 @@ case class Conv2D(config: Conv2DConfig) {
 
   private def ifMapAddr(ti: Int, th: Int, tw: Int, kr: Int, ks: Int, sth: Int, stw: Int, od: Int): Int =
     ti * ifMapSize +
-      th * stride * Nihw * Nd * Tohw +
-      tw * Tohw * stride * Nd +
+      th * stride * Nihw * Nd +
+      tw * stride * Nd +
       kr * Nihw * Nd + ks * Nd +
       sth * stride * Nihw * Nd +
       stw * stride * Nd +
@@ -112,8 +110,8 @@ case class Conv2D(config: Conv2DConfig) {
 
   private def ofMapAddr(to: Int, th: Int, tw: Int, sth: Int, stw: Int, od: Int): Int =
     to * ofMapSize +
-      th * Tohw * Nohw * Nd +
-      tw * Tohw * Nd +
+      th * Nohw * Nd +
+      tw * Nd +
       sth * Nohw * Nd +
       stw * Nd +
       od

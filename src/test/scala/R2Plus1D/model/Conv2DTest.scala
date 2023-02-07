@@ -4,9 +4,9 @@ class Conv2DTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   it should "work normally" in { // attention: it will consume about 6 minutes
     val config: Conv2DConfig =
-      Conv2DConfig(Uic = 2, Uc = 4, Nic = 3, Nc = 5, Nd = 3, Nihw = 5, Nohw = 5, Krs = 3, stride = 1, padding = 1)
+      Conv2DConfig(Uic = 4, Uc = 12, Nic = 9, Nc = 8, Nd = 2, Nihw = 5, Krs = 3, stride = 2, padding = 2)
     val conv2D = Conv2D(config)
-
+    config.display()
     val ifMap  = conv2D.randIfMap()
     val weight = conv2D.randWeight()
 
@@ -26,10 +26,10 @@ class Conv2DTest extends org.scalatest.flatspec.AnyFlatSpec {
     val loopRes       = conv2D.loop(ifMap, weight)
     val loopRes2Tile  = conv2D.ofMap2Mem(loopRes)
 
-    println("-------------------------unroll result-------------------------------------------")
-    loopUnrollRes.foreach(o => println(o.mkString(" ")))
-    println("---------------------------roll result-------------------------------------------")
-    loopRes2Tile.foreach(o => println(o.mkString(" ")))
+//    println("-------------------------unroll result-------------------------------------------")
+//    loopUnrollRes.foreach(o => println(o.mkString(" ")))
+//    println("---------------------------roll result-------------------------------------------")
+//    loopRes2Tile.foreach(o => println(o.mkString(" ")))
 
     loopUnrollRes.zip(loopRes2Tile).foreach { case (u, l) => u.zip(l).foreach { case (uic, lic) => assert(uic == lic) } }
 

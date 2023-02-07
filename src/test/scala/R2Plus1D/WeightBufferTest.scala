@@ -7,13 +7,13 @@ import scala.language.postfixOps
 class WeightBufferTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   "weight buffer 2D" should "consume proper resource" in MyVivadoAction(
-    WeightBuffer(dataWidth = 288, depth = 152 * 1024, readLatency = 4),
+    WeightBuffer(dataWidth = 8, depth = 152 * 1024, uic = 36, readLatency = 4),
     "weight_buffer_2D",
     IMPL
   )
 
   "weight buffer 1D" should "consume proper resource" in MyVivadoAction(
-    WeightBuffer(dataWidth = 1024, depth = 13824, readLatency = 4),
+    WeightBuffer(dataWidth = 8, depth = 13824, uic = 144, readLatency = 4),
     "weight_buffer_1D",
     SYNTH
   )
@@ -26,7 +26,7 @@ class WeightBufferTest extends org.scalatest.flatspec.AnyFlatSpec {
       )
     )
     .compile {
-      val dut = WeightBuffer(dataWidth = 16, depth = 256, readLatency = 4)
+      val dut = WeightBuffer(dataWidth = 8, depth = 256, uic = 2, readLatency = 4)
       dut
     }
     .doSim { dut =>

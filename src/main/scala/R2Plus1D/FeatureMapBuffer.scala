@@ -6,11 +6,11 @@ import spinal.lib._
 
 import scala.language.postfixOps
 
-case class FeatureMapBuffer(width: Int = 512, depth: Int = 50176, readLatency: Int = 4) extends Component {
+case class FeatureMapBuffer(width: Int = 512, depth: Int = 50176, uic: Int = 36, readLatency: Int = 4) extends Component {
   val io = new Bundle {
     val switch: Bool = in Bool ()
     val we:     Bool = in Bool ()
-    val wData:  Bits = in Bits (width bits)
+    val wData:  Bits = in Bits (width * uic bits)
     val wAddr:  UInt = in UInt (log2Up(depth) bits)
 
     val readEn2DPE: Bool = in Bool ()
@@ -18,11 +18,11 @@ case class FeatureMapBuffer(width: Int = 512, depth: Int = 50176, readLatency: I
     val rAddr2DPE:  UInt = in UInt (log2Up(depth) bits)
     val rAddr1DPE:  UInt = in UInt (log2Up(depth) bits)
 
-    val rData2DPE: Bits = out Bits (width bits)
-    val rData1DPE: Bits = out Bits (width bits)
+    val rData2DPE: Bits = out Bits (width * uic bits)
+    val rData1DPE: Bits = out Bits (width * uic bits)
   }
 
-  val urams: Seq[TDPURAM] = Seq.fill(2)(TDPURAM(width = width, depth = depth))
+  val urams: Seq[TDPURAM] = Seq.fill(2)(TDPURAM(width = width * uic, depth = depth))
 
   val state: Bool = RegInit(False) // 0 -> read urams0, write urams1
   state.toggleWhen(io.switch)

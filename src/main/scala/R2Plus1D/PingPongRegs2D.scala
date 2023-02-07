@@ -9,14 +9,15 @@ import scala.language.postfixOps
 
 case class PingPongRegs2D(uic: Int = 36, uoc: Int = 144, width: Int = 8, readLatency: Int = 4) extends Component {
   val io = new Bundle {
-    val weightBufferRdy = in Bool ()
-    val weightLoadedNum = in UInt (16 bits) //
-    val weightAddrBase  = in UInt (log2Up(weightBuffer2DDepth) bits)
-    val tileDone        = in Bool ()
-    val layerDone       = in Bool ()
-    val weightIn:  Bits      = in Bits (uic * width bits)
-    val weightOut: Vec[Bits] = out Vec (Bits(uic * width bits), uoc)
-    val readAddr:  UInt      = out UInt (log2Up(weightBuffer2DDepth) bits)
+    val weightBufferRdy:    Bool      = in Bool ()
+    val weightLoadedNum:    UInt      = in UInt (16 bits) //
+    val weightAddrBase:     UInt      = in UInt (log2Up(weightBuffer2DDepth) bits)
+    val tileDone:           Bool      = in Bool ()
+    val layerDone:          Bool      = in Bool ()
+    val weightIn:           Bits      = in Bits (uic * width bits)
+    val weightOut:          Vec[Bits] = out Vec (Bits(uic * width bits), uoc)
+    val readAddr:           UInt      = out UInt (log2Up(weightBuffer2DDepth) bits)
+    val weightBufferReadEn: Bool      = out Bool ()
   }
 
   val state:    Bool = RegInit(False) // 0 -> read regs0, 1 -> read regs1
@@ -92,6 +93,6 @@ case class PingPongRegs2D(uic: Int = 36, uoc: Int = 144, width: Int = 8, readLat
         rdEn.set()
       }
     }
-
   }
+  io.weightBufferReadEn := rdEn
 }
