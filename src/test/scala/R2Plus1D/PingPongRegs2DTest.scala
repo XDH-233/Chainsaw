@@ -17,7 +17,7 @@ class PingPongRegs2DTest extends org.scalatest.flatspec.AnyFlatSpec {
       )
     )
     .compile {
-      val dut = PingPongRegs2D(uic = 4, uoc = 10, width = 2)
+      val dut = PingPongRegs2D(uic = 4, uoc = 12, width = 2)
       dut
     }
     .doSim { dut =>
@@ -27,29 +27,27 @@ class PingPongRegs2DTest extends org.scalatest.flatspec.AnyFlatSpec {
       io.weightAddrBase  #= 0
       io.tileDone        #= false
       io.weightIn        #= 0
+      io.weightLoadedNum #= 0
       clockDomain.waitSampling()
+      io.weightLoadedNum #= 12
       io.weightBufferRdy #= true
+      clockDomain.waitSampling()
+      (0 until 48).foreach { _ =>
+        io.weightIn.randomize()
+        clockDomain.waitSampling()
+      }
       io.weightLoadedNum #= 8
-      clockDomain.waitSampling(5)
-      (0 until 8).foreach { i =>
-        io.weightIn #= i
+      clockDomain.waitSampling()
+      (0 until 47).foreach { _ =>
+        io.weightIn.randomize()
         clockDomain.waitSampling()
       }
-      clockDomain.waitSampling(4)
-      (0 until 8).foreach { i =>
-        io.weightIn #= 8 - i
+      io.weightLoadedNum #= 3
+      clockDomain.waitSampling()
+      (0 until 50).foreach { _ =>
+        io.weightIn.randomize()
         clockDomain.waitSampling()
       }
-      clockDomain.waitSampling(10)
-      io.tileDone #= true
-      clockDomain.waitSampling()
-      io.tileDone #= false
-      io.weightIn #= 100
-      clockDomain.waitSampling(30)
-      io.tileDone #= true
-      clockDomain.waitSampling()
-      io.tileDone #= false
-      io.weightIn #= 45
-      clockDomain.waitSampling(30)
     }
+
 }

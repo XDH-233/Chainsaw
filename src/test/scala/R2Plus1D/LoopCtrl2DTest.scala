@@ -11,7 +11,7 @@ class LoopCtrl2DTest extends org.scalatest.flatspec.AnyFlatSpec {
   it should "work right" in {
     // -------------------Conv2D model----------------------------------------------------------------------------------
     val config =
-      model.Conv2DConfig(Uic = 4, Uc = 12, Nic = 9, Nc = 8, Nd = 2, Nihw = 5, Krs = 3, stride = 2, padding = 2)
+      model.Conv2DConfig(Uic = 4, Uc = 12, Nic = 9, Nc = 16, Nd = 2, Nihw = 5, Krs = 3, stride = 2, padding = 2)
     val conv2D = model.Conv2D(config)
     config.display()
     val ifMap  = conv2D.randIfMap()
@@ -32,32 +32,30 @@ class LoopCtrl2DTest extends org.scalatest.flatspec.AnyFlatSpec {
       .doSim { dut =>
         import dut._
         dut.clockDomain.forkStimulus(10)
-        import config._
-        io.Nic         #= Nic // Uic = 36
-        io.Nc          #= Nc // Uc = 144
-        io.Nd          #= Nd
-        io.Nohw        #= Nohw
-        io.Krs         #= Krs
-        io.Toh         #= Toh
-        io.Tow         #= Tow
-        io.loadConfig  #= false
-        io.PEDone      #= false
-        io.NcDUcCeil   #= NcDUcCeil
-        io.NicDUicCeil #= NicDUicCeil
-        io.NohwDTohCei #= NohwDTohCeil
-        io.NohwDTowCei #= NohwDTowCeil
-        io.kernelSize  #= kernelSize
-        io.Nihw        #= Nihw
-        io.stride      #= stride > 1
-        io.padding     #= padding
-        io.ifMapSize   #= ifMapSize
+        import io.configParaPorts._
+        Nic           #= config.Nic // Uic = 36
+        Nc            #= config.Nc // Uc = 144
+        Nd            #= config.Nd
+        Nohw          #= config.Nohw
+        Krs           #= config.Krs
+        Toh           #= config.Toh
+        Tow           #= config.Tow
+        io.loadConfig #= false
+        NcDUcCeil     #= config.NcDUcCeil
+        NicDUicCeil   #= config.NicDUicCeil
+        NohwDTohCei   #= config.NohwDTohCeil
+        NohwDTowCei   #= config.NohwDTowCeil
+        kernelSize    #= config.kernelSize
+        Nihw          #= config.Nihw
+        stride        #= config.stride > 1
+        padding       #= config.padding
+        ifMapSize     #= config.ifMapSize
         clockDomain.waitSampling()
         io.loadConfig #= true
         clockDomain.waitSampling()
         io.loadConfig #= false
         clockDomain.waitSampling()
-        io.PEDone #= true
-        clockDomain.waitSampling(10000)
+        clockDomain.waitSampling(2000)
       }
 
   }

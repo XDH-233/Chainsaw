@@ -1,5 +1,6 @@
 package R2Plus1D.model
 import math.{ceil, sqrt}
+import scala.language.postfixOps
 import util.Random.nextInt
 
 case class Conv2D(config: Conv2DConfig) {
@@ -18,27 +19,31 @@ case class Conv2D(config: Conv2DConfig) {
         for (kr <- 0 until Krs; ks <- 0 until Krs) {
           val weightAddrHead: Int = weightAddr(to, ti, kr, ks)
           for (sth <- 0 until Toh) {
-            if (th + sth < Nohw) {
-              for (stw <- 0 until Tow) {
-                if (tw + stw < Nohw) {
-                  for (od <- 0 until Nd) {
-                    val ox = th + sth
-                    val oy = tw + stw
-                    val ix = ox * stride + kr - padding
-                    val iy = oy * stride + ks - padding
-                    val ifAddr: Int        = ifMapAddr(ti, th, tw, kr, ks, sth, stw, od)
-                    val ifMap:  Array[Int] = if (ix < 0 || ix >= Nihw || iy < 0 || iy >= Nihw) Array.fill(Uic)(0) else ifMapTile(ifAddr)
+            for (stw <- 0 until Tow) {
+              for (od <- 0 until Nd) {
+                val ox = th + sth
+                val oy = tw + stw
+                val ix = ox * stride + kr - padding
+                val iy = oy * stride + ks - padding
+                val ifAddr: Int = ifMapAddr(ti, th, tw, kr, ks, sth, stw, od)
+                val ifMap: Array[Int] =
+                  if (ix < 0 || ix >= Nihw || iy < 0 || iy >= Nihw || th + sth >= Nohw || tw + stw >= Nohw)
+                    Array.fill(Uic)(0)
+                  else
+                    ifMapTile(ifAddr)
 
-                    val weight: Array[Array[Int]] = Array.tabulate(Uc)(o => weightTile(weightAddrHead + o)).reverse
-                    val psum:   Array[Int]        = PEArray(ifMap, weight)
-                    val ofAddr = ofMapAddr(to, th, tw, sth, stw, od)
-                    psum.zipWithIndex.foreach { case (p, i) => ofMapTile(ofAddr)(i) += p }
-                    println("-" * 100)
-                    printf(f"od: $od%-4d stw: $stw%-4d sth: $sth%-4d ks: $ks%-4d kr: $kr%-4d tw: $tw%-4d th: $th%-4d ti: $ti%-4d to: $to%-4d\n")
-                    printf(f"ix: $ix%-4d iy: $iy%-4d ifAddr: $ifAddr%-5d weightAddrHead: $weightAddrHead%-5d\n")
-                  }
+                val weight: Array[Array[Int]] = Array.tabulate(Uc)(o => weightTile(weightAddrHead + o)).reverse
+                val psum:   Array[Int]        = PEArray(ifMap, weight)
+                val ofAddr = ofMapAddr(to, th, tw, sth, stw, od)
+                if (tw + stw < Nohw && th + sth < Nohw) {
+                  psum.zipWithIndex.foreach { case (p, i) => ofMapTile(ofAddr)(i) += p }
                 }
+                println("-" * 100)
+                printf(f"od: $od%-4d stw: $stw%-4d sth: $sth%-4d ks: $ks%-4d kr: $kr%-4d tw: $tw%-4d th: $th%-4d ti: $ti%-4d to: $to%-4d\n")
+                printf(f"ix: $ix%-4d iy: $iy%-4d ifAddr: $ifAddr%-5d weightAddrHead: $weightAddrHead%-5d\n")
+                println(f"oh: ${th + sth}%-4d ow: ${tw + stw}%-4d")
               }
+
             }
           }
         }
