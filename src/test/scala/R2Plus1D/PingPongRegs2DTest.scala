@@ -25,7 +25,6 @@ class PingPongRegs2DTest extends org.scalatest.flatspec.AnyFlatSpec {
       dut.clockDomain.forkStimulus(10)
       io.weightBufferRdy #= false
       io.weightAddrBase  #= 0
-      io.tileDone        #= false
       io.weightIn        #= 0
       io.weightLoadedNum #= 0
       clockDomain.waitSampling()

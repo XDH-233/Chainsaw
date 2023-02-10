@@ -18,10 +18,11 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc) extends 
     val filled:                         Bool = in Bool ()
     val weightAddrBase:                 UInt = out UInt (log2Up(Parameter.weightBuffer2DDepth) bits)
     val weightLoadedNum:                UInt = out UInt (log2Up(uc) bits) setAsReg () init (0)
-    val tileDone:                       Bool = out Bool ()
+    val layerDone:                      Bool = out Bool () setAsReg () init (False)
 
     val ifMapAddr:    SInt = out SInt (log2Up(Parameter.featureMapDepth) + 1 bits)
     val ifMapAddrVld: Bool = out Bool ()
+    val ifMapRdEn:    Bool = out Bool () setAsReg () init (False)
   }
 
   import io.configParaPorts._
@@ -82,8 +83,6 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc) extends 
     to.inc()
     toNc.inc()
   }
-
-  io.tileDone := sth.willOverFlow
 
   // -------------------weight address accumulation---------------------------------------------------------------------
   val ksWeightAddr = GeneralCounter(step = U(uc), top = Krs * uc, en = io.loadConfig)
@@ -169,6 +168,15 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc) extends 
 
   io.ifMapAddr := (tiIfMapAddr.value + thIfMapAddr.value + twIfMapAddr.value + krIfMapAddr.value + ksIfMapAddr.value +
     sthIfMapAddr.value + stwIfMapAddr.value + od.value - (Nihw + 1) * Nd * padding).resize(log2Up(Parameter.featureMapDepth) + 1).asSInt
+  io.layerDone.setWhen(toWeightAddr.willOverFlow)
+  io.layerDone.clearWhen(io.loadConfig)
+  when(io.filled) {
+    when(to.willOverFlow) {
+      io.ifMapRdEn.clear()
+    } otherwise {
+      io.ifMapRdEn.set()
+    }
+  }
   // -------------------------------------------------------------------------------------------------------------------
 
   def ifMapCoordinate(t: GeneralCounter, i: GeneralCounter, k: GeneralCounter): SInt =

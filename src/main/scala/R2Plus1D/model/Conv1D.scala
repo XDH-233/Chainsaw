@@ -1,12 +1,10 @@
 package R2Plus1D.model
 
+import scala.language.postfixOps
 import scala.math.ceil
 import util.Random.nextInt
 case class Conv1D(config: Conv1DConfig) {
   import config._
-
-  private val ifMapSize: Int = Nid * Nhw * Nhw
-  private val ofMapSize: Int = Nod * Nhw * Nhw
 
   def randomIfMap:  Array[Array[Array[Array[Int]]]] = Array.fill(Nc)(Array.fill(Nid)(Array.fill(Nhw)(Array.fill(Nhw)(nextInt(10))))) // ic -> id -> ih -> iw
   def randomWeight: Array[Array[Array[Int]]]        = Array.fill(Noc)(Array.fill(Nc)(Array.fill(Kt)(nextInt(10)))) // oc -> ic -> kt
@@ -42,6 +40,9 @@ case class Conv1D(config: Conv1DConfig) {
           val psum      = PEArray(ifMap, weight)
           val ofMapAddr = to * ofMapSize + oh * Nhw * Nod + ow * Nod + od
           psum.zipWithIndex.foreach { case (p, i) => ofMapTile(ofMapAddr)(i) += p }
+          println("-" * 100)
+          printf(f"ow: $ow%-4d oh: $oh%-4d kt: $kt%-4d od: $od%-4d ti: $ti%-4d\n")
+          printf(f"id: $id%-4d ifAddr: $ifMapAddr%-4d weightAddrHead: $weightAddrHead%-4d\n")
         }
       }
     }

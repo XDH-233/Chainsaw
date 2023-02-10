@@ -52,6 +52,7 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
   pingPongRegs2D.io.weightAddrBase  := loopCtrl2D.io.weightAddrBase
   pingPongRegs2D.io.weightLoadedNum := loopCtrl2D.io.weightLoadedNum
   loopCtrl2D.io.filled              := pingPongRegs2D.io.filled
+  pingPongRegs2D.io.layerDone       := loopCtrl2D.io.layerDone
 
   // feature map buffer write
   featureMapBuffer.io.we    := io.fMapWe
@@ -59,7 +60,7 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
   featureMapBuffer.io.wData := io.fMapWData
 
   // feature map read 2D
-  featureMapBuffer.io.readEn2DPE := pingPongRegs2D.io.filled // ping pong ready
+  featureMapBuffer.io.readEn2DPE := loopCtrl2D.io.ifMapRdEn // ping pong ready
   featureMapBuffer.io.rAddr2DPE  := loopCtrl2D.io.ifMapAddr.asUInt.resized // addr
   PE2D.io.ifMap.zip(featureMapBuffer.io.rData2DPE).foreach { case (p, f) => p := f.asSInt } // read data
   featureMapBuffer.io.rAddr2DPEVld := loopCtrl2D.io.ifMapAddrVld

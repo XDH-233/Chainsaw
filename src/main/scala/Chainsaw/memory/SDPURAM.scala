@@ -3,7 +3,7 @@ import spinal.core._
 
 import scala.language.postfixOps
 
-case class SDPURAM(width: Int, depth: Int, readLatency: Int) extends BlackBox {
+case class SDPURAM(width: Int, depth: Int, readLatency: Int = 4) extends BlackBox {
   val io = new Bundle {
     val clk:    Bool = in Bool ()
     val reset:  Bool = in Bool ()

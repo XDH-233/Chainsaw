@@ -13,7 +13,6 @@ case class PingPongRegs2D(uic: Int = 36, uoc: Int = 144, width: Int = 8, readLat
     val weightBufferRdy: Bool      = in Bool ()
     val weightLoadedNum: UInt      = in UInt (log2Up(uoc) bits) //
     val weightAddrBase:  UInt      = in UInt (log2Up(weightBuffer2DDepth) bits)
-    val tileDone:        Bool      = out Bool () setAsReg () init (False)
     val layerDone:       Bool      = in Bool ()
     val weightIn:        Bits      = in Bits (uic * width bits)
     val weightOut:       Vec[Bits] = out Vec (Bits(uic * width bits), uoc)
@@ -28,12 +27,7 @@ case class PingPongRegs2D(uic: Int = 36, uoc: Int = 144, width: Int = 8, readLat
   val load:        Bool      = io.readEn.d(readLatency)
   val ping, pong:  Vec[Bits] = Vec(Reg(Bits(uic * width bits)), uoc)
 
-  io.weightOut.zip(ping).zip(pong).foreach { case ((w, i), o) => w := Mux(loadPing, o, i) }
-  when(loadPing) {
-    loadShift(ping)
-  } otherwise {
-    loadShift(pong)
-  }
+  Function.pingPongLoadAndOut(ping, pong, io.weightIn, io.weightOut, loadPing, load)
 
   val FSM = new StateMachine {
     val idle    = new State with EntryPoint
@@ -41,7 +35,7 @@ case class PingPongRegs2D(uic: Int = 36, uoc: Int = 144, width: Int = 8, readLat
     val filled  = new State
 
     idle.whenIsActive {
-      when(io.weightBufferRdy) {
+      when(io.weightBufferRdy & ~io.layerDone) {
         io.readEn.set()
         pong.foreach(_.clearAll())
         goto(fillOne)
@@ -69,6 +63,13 @@ case class PingPongRegs2D(uic: Int = 36, uoc: Int = 144, width: Int = 8, readLat
           } otherwise {
             ping.foreach(_.clearAll())
           }
+
+        }
+        when(io.layerDone & io.readDone) {
+          readCounter.clear()
+          io.filled.clear()
+          io.readEn.clear()
+          goto(idle)
         }
       }
 
@@ -77,10 +78,5 @@ case class PingPongRegs2D(uic: Int = 36, uoc: Int = 144, width: Int = 8, readLat
 
   io.readAddr := io.weightAddrBase + (U(uoc - 1) - readCounter.value)
   io.readDone := readCounter.willOverflow
-  def loadShift(p: Vec[Bits]): Unit = {
-    when(load) {
-      p.head := io.weightIn
-      p.tail.zip(p.init).foreach { case (t, i) => t := i }
-    }
-  }
+
 }
