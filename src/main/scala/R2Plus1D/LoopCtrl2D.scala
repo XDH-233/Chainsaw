@@ -11,18 +11,18 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc) extends 
   val width = 16
   val io = new Bundle {
 
-    val configParaPorts: ConfigParaPorts = slave(new ConfigParaPorts(width))
+    val configParaPorts: ConfigParaPorts2D = slave(new ConfigParaPorts2D(width))
 
     val weightRdy, fMapRdy, loadConfig: Bool = in Bool ()
     val readDone:                       Bool = in Bool ()
     val filled:                         Bool = in Bool ()
     val weightAddrBase:                 UInt = out UInt (log2Up(Parameter.weightBuffer2DDepth) bits)
-    val weightLoadedNum:                UInt = out UInt (log2Up(uc) bits) setAsReg () init (0)
+    val weightLoadedNum:                UInt = out UInt (log2Up(uc + 1) bits) setAsReg () init (0)
     val layerDone:                      Bool = out Bool () setAsReg () init (False)
 
     val ifMapAddr:    SInt = out SInt (log2Up(Parameter.featureMapDepth) + 1 bits)
     val ifMapAddrVld: Bool = out Bool ()
-    val ifMapRdEn:    Bool = out Bool () setAsReg () init (False)
+    val ifMapRdEn:    Bool = out Bool ()
   }
 
   import io.configParaPorts._
@@ -170,13 +170,7 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc) extends 
     sthIfMapAddr.value + stwIfMapAddr.value + od.value - (Nihw + 1) * Nd * padding).resize(log2Up(Parameter.featureMapDepth) + 1).asSInt
   io.layerDone.setWhen(toWeightAddr.willOverFlow)
   io.layerDone.clearWhen(io.loadConfig)
-  when(io.filled) {
-    when(to.willOverFlow) {
-      io.ifMapRdEn.clear()
-    } otherwise {
-      io.ifMapRdEn.set()
-    }
-  }
+  io.ifMapRdEn := io.filled
   // -------------------------------------------------------------------------------------------------------------------
 
   def ifMapCoordinate(t: GeneralCounter, i: GeneralCounter, k: GeneralCounter): SInt =

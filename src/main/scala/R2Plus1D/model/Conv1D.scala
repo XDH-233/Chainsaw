@@ -41,7 +41,7 @@ case class Conv1D(config: Conv1DConfig) {
           val ofMapAddr = to * ofMapSize + oh * Nhw * Nod + ow * Nod + od
           psum.zipWithIndex.foreach { case (p, i) => ofMapTile(ofMapAddr)(i) += p }
           println("-" * 100)
-          printf(f"ow: $ow%-4d oh: $oh%-4d kt: $kt%-4d od: $od%-4d ti: $ti%-4d\n")
+          printf(f"ow: $ow%-4d oh: $oh%-4d kt: $kt%-4d od: $od%-4d ti: $ti%-4d to: $to%-4d\n")
           printf(f"id: $id%-4d ifAddr: $ifMapAddr%-4d weightAddrHead: $weightAddrHead%-4d\n")
         }
       }

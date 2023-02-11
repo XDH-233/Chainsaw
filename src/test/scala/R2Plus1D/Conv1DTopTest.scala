@@ -1,11 +1,10 @@
 package R2Plus1D
 import spinal.core._
 import spinal.core.sim._
-
 import scala.language.postfixOps
 import Chainsaw.xilinx._
 
-class LoopCtrl1DTest extends org.scalatest.flatspec.AnyFlatSpec {
+class Conv1DTopTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   it should "work right " in {
     // ----------------------- model ------------------------------------------------------------------------------------
@@ -24,29 +23,25 @@ class LoopCtrl1DTest extends org.scalatest.flatspec.AnyFlatSpec {
         )
       )
       .compile {
-        val dut = LoopCtrl1D(uc = config.Uc, uoc = config.Uoc)
+        val dut = Conv1DTop(uc = config.Uc, uoc = config.Uoc, dataWidth = 4)
         dut
       }
       .doSim { dut =>
         import dut._
         dut.clockDomain.forkStimulus(10)
         io.loadConfig #= false
-        io.PEDone     #= false
-
-        io.config.Nhw         #= config.Nhw
-        io.config.Kt          #= config.Kt
-        io.config.Nid         #= config.Nid
-        io.config.Nod         #= config.Nod
-        io.config.Nc          #= config.Nc
-        io.config.Noc         #= config.Noc
-        io.config.NcDUcCeil   #= config.NcDUcCeil
-        io.config.NocDUocCeil #= config.NocDUocCeil
+        io.weightRdy  #= false
+        io.ifMapRdy   #= false
+        io.configPorts.loadConfigInSim(config)
         clockDomain.waitSampling()
         io.loadConfig #= true
         clockDomain.waitSampling()
         io.loadConfig #= false
-        io.PEDone     #= true
+        io.weightRdy  #= true
+        clockDomain.waitSampling(15)
+        io.ifMapRdy #= true
         clockDomain.waitSampling(1000)
       }
+
   }
 }

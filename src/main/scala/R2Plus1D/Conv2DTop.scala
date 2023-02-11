@@ -14,14 +14,14 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
     val weightWriteAddr: UInt = in UInt (log2Up(weightBuffer2DDepth) bits)
     val weightWriteData: Bits = in Bits (dataWidth * uic bits)
 
-    val fMapSwitch: Bool = in Bool ()
-    val fMapWe:     Bool = in Bool ()
-    val fMapWData:  Bits = in Bits (dataWidth * uic bits)
-    val fMapWAddr:  UInt = in UInt (log2Up(featureMapDepth) bits)
-
-    val weightBufferRdy: Bool            = in Bool ()
-    val loadConfig:      Bool            = in Bool ()
-    val configParaPorts: ConfigParaPorts = slave(new ConfigParaPorts(16))
+    val fMapSwitch:      Bool              = in Bool ()
+    val fMapWe:          Bool              = in Bool ()
+    val fMapWData:       Bits              = in Bits (dataWidth * uic bits)
+    val fMapWAddr:       UInt              = in UInt (log2Up(featureMapDepth) bits)
+    val ifMapRdy:        Bool              = in Bool ()
+    val weightBufferRdy: Bool              = in Bool ()
+    val loadConfig:      Bool              = in Bool ()
+    val configParaPorts: ConfigParaPorts2D = slave(new ConfigParaPorts2D(16))
   }
 
   val PE2D:             PE               = PE(uic = uic, uoc = uc, width = dataWidth)
@@ -35,6 +35,7 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
   loopCtrl2D.io.configParaPorts.assignAllByName(io.configParaPorts)
   loopCtrl2D.io.loadConfig   := io.loadConfig
   featureMapBuffer.io.switch := io.fMapSwitch
+  pingPongRegs2D.io.ifMapRdy := io.ifMapRdy
 
   // weight write
   weightBuffer2D.io.writeEn   := io.weightWriteEn

@@ -6,7 +6,7 @@ import Chainsaw._
 import R2Plus1D.Parameter.ifMapSizeMax2D
 import spinal.lib._
 
-class ConfigParaPorts(width: Int) extends Bundle with IMasterSlave {
+class ConfigParaPorts2D(width: Int) extends Bundle with IMasterSlave {
   val Nic, Nc, Nohw, Nd, Krs, Tow, Toh, Nihw: UInt = UInt(width bits)
   val NcDUcCeil, NicDUicCeil:                 UInt = UInt(4 bits)
   val kernelSize:                             UInt = UInt(6 bits)

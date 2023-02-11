@@ -11,10 +11,10 @@ case class OutputBuffer2D(dataWidth: Int = 8, uc: Int = Parameter.Uc, readLatenc
     val wAddr = in UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
     val wData = in Bits (dataWidth * uc bits)
 
-    val rdEn  = in Bool ()
-    val rAddr = in UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
-    val rData = out Bits (dataWidth * uc bits)
-
+    val rdEn     = in Bool ()
+    val rAddr    = in UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
+    val rAddrVld = in Bool ()
+    val rData    = out Vec (Bits(dataWidth bits), uc)
   }
 
   val ram: SDPURAM = SDPURAM(width = dataWidth * uc, depth = depth)
@@ -23,5 +23,8 @@ case class OutputBuffer2D(dataWidth: Int = 8, uc: Int = Parameter.Uc, readLatenc
   ram.io.addrb  := io.rAddr
   ram.io.wea    := io.we
   ram.io.dina   := io.wData
-  io.rData      := ram.io.doutb
+  val rData = Bits(dataWidth * uc bits)
+
+  rData := Mux(io.rAddrVld.d(readLatency), ram.io.doutb, B(0))
+  Function.vecZip(io.rData, rData.subdivideIn(dataWidth bits))
 }

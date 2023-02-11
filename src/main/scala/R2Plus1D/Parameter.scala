@@ -9,7 +9,7 @@ object Parameter {
   val featureMapDepth: Int = 100 * 1024 // 100k
 
   val weightBuffer2DDepth: Int = 152 * 1024 // 152k
-  val weightBuffer1Depth:  Int = 16 * 1024 // 16k
+  val weightBuffer1DDepth: Int = 16 * 1024 // 16k
   val outputBuffer2DDepth: Int = 208 * 4 * 1024
 
   val ifMapSizeMax2D: Int = 16 * 112 * 112

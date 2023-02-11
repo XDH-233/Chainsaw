@@ -13,11 +13,12 @@ case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int =
     val readEn:         Bool      = out Bool () setAsReg () init False
     val weightFilled:   Bool      = out Bool () setAsReg () init False
     val ofMapSize2D:    UInt      = in UInt (log2Up(3136 + 1) bits)
-    val weightLoadNum:  UInt      = in UInt (log2Up(Parameter.Uoc + 1) bits)
-    val weightAddrBase: UInt      = in UInt (log2Up(Parameter.weightBuffer1Depth) bits)
-    val weightAddr:     UInt      = out UInt (log2Up(Parameter.weightBuffer1Depth) bits)
+    val weightLoadNum:  UInt      = in UInt (log2Up(uoc + 1) bits)
+    val weightAddrBase: UInt      = in UInt (log2Up(Parameter.weightBuffer1DDepth) bits)
+    val weightAddr:     UInt      = out UInt (log2Up(Parameter.weightBuffer1DDepth) bits)
     val weightIn:       Bits      = in Bits (dataWidth * uc bits)
     val weightOut:      Vec[Bits] = out Vec (Bits(dataWidth * uc bits), uoc)
+    val ifMapRdy:       Bool      = in Bool ()
   }
   io.readDone.clear()
 
@@ -44,10 +45,16 @@ case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int =
     fillOne.whenIsActive {
       readCounter.inc()
       when(readCounter.value + 1 === io.weightLoadNum) {
-        io.readDone.set()
-        readCounter.clear()
-        io.weightFilled.set()
-        goto(filled)
+        when(io.ifMapRdy) {
+          io.readEn.set()
+          io.readDone.set()
+          io.weightFilled.set()
+          readCounter.clear()
+          goto(filled)
+        } otherwise {
+          io.readEn.clear()
+        }
+
       }
     }
 
@@ -60,6 +67,16 @@ case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int =
       }
       when(readCounter.value + 1 === readLatency) {
         fillPing := ~fillPing
+      }
+      when(readCounter.willOverFlow) {
+        io.readDone.set()
+      }
+
+      when(io.layerDone & io.readDone) {
+        load.clear()
+        io.readEn.clear()
+        io.weightFilled.clear()
+        goto(idle)
       }
     }
   }

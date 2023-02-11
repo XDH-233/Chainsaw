@@ -17,9 +17,10 @@ case class PingPongRegs2D(uic: Int = 36, uoc: Int = 144, width: Int = 8, readLat
     val weightIn:        Bits      = in Bits (uic * width bits)
     val weightOut:       Vec[Bits] = out Vec (Bits(uic * width bits), uoc)
     val readAddr:        UInt      = out UInt (log2Up(weightBuffer2DDepth) bits)
-    val readEn:          Bool      = out Bool () setAsReg () init (False)
+    val readEn:          Bool      = out Bool () setAsReg () init False
     val readDone:        Bool      = out Bool ()
-    val filled:          Bool      = out Bool () setAsReg () init (False)
+    val filled:          Bool      = out Bool () setAsReg () init False
+    val ifMapRdy:        Bool      = in Bool ()
   }
 
   val loadPing:    Bool      = RegInit(False)
@@ -44,8 +45,13 @@ case class PingPongRegs2D(uic: Int = 36, uoc: Int = 144, width: Int = 8, readLat
       fillOne.whenIsActive {
         readCounter.increment()
         when(readCounter.willOverflow) {
-          io.filled.set()
-          goto(filled)
+          when(io.ifMapRdy) {
+            io.readEn.set()
+            io.filled.set()
+            goto(filled)
+          } otherwise {
+            io.readEn.clear()
+          }
         }
       }
 

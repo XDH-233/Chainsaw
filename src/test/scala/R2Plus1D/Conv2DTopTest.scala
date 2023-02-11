@@ -50,12 +50,15 @@ class Conv2DTopTest extends org.scalatest.flatspec.AnyFlatSpec {
         padding            #= config.padding
         ifMapSize          #= config.ifMapSize
         io.weightBufferRdy #= false
+        io.ifMapRdy        #= false
         clockDomain.waitSampling()
         io.loadConfig #= true
         clockDomain.waitSampling()
         io.loadConfig #= false
         clockDomain.waitSampling()
         io.weightBufferRdy #= true
+        clockDomain.waitSampling(15)
+        io.ifMapRdy #= true
         clockDomain.waitSampling(3000)
       }
 
