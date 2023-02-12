@@ -17,6 +17,7 @@ class Conv2DTopTest extends org.scalatest.flatspec.AnyFlatSpec {
     val ifMap  = conv2D.randIfMap()
     val weight = conv2D.randWeight()
     conv2D.loopUnroll(conv2D.ifMap2Mem(ifMap), conv2D.weight2Mem(weight))
+    // ------------------- simulation ----------------------------------------------------------------------------------
     SimConfig.withFstWave
       .withConfig(
         SpinalConfig(
@@ -32,25 +33,12 @@ class Conv2DTopTest extends org.scalatest.flatspec.AnyFlatSpec {
         import dut._
         dut.clockDomain.forkStimulus(10)
         import io.configParaPorts._
-        Nic                #= config.Nic // Uic = 36
-        Nc                 #= config.Nc // Uc = 144
-        Nd                 #= config.Nd
-        Nohw               #= config.Nohw
-        Krs                #= config.Krs
-        Toh                #= config.Toh
-        Tow                #= config.Tow
+        io.configParaPorts.assignConfig(config)
         io.loadConfig      #= false
-        NcDUcCeil          #= config.NcDUcCeil
-        NicDUicCeil        #= config.NicDUicCeil
-        NohwDTohCei        #= config.NohwDTohCeil
-        NohwDTowCei        #= config.NohwDTowCeil
-        kernelSize         #= config.kernelSize
-        Nihw               #= config.Nihw
-        stride             #= config.stride > 1
-        padding            #= config.padding
         ifMapSize          #= config.ifMapSize
         io.weightBufferRdy #= false
         io.ifMapRdy        #= false
+
         clockDomain.waitSampling()
         io.loadConfig #= true
         clockDomain.waitSampling()

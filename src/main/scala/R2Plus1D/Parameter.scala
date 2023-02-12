@@ -14,5 +14,5 @@ object Parameter {
 
   val ifMapSizeMax2D: Int = 16 * 112 * 112
   val ifMapSizeMax1D: Int = 16 * 56 * 56
-
+  val ofMapSizeMax2D: Int = ifMapSizeMax1D
 }

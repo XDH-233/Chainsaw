@@ -28,11 +28,11 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
   val weightBuffer2D:   WeightBuffer     = WeightBuffer(dataWidth = dataWidth, depth = weightBuffer2DDepth, uic = uic)
   val featureMapBuffer: FeatureMapBuffer = FeatureMapBuffer(width = dataWidth, depth = featureMapDepth, uic = uic)
   val pingPongRegs2D:   PingPongRegs2D   = PingPongRegs2D(width = dataWidth, uoc = uc, uic = uic)
-  val loopCtrl2D:       LoopCtrl2D       = LoopCtrl2D(uic = uic, uc = uc)
+  val loopCtrl2D:       LoopCtrl2D       = LoopCtrl2D(uic = uic, uc = uc, PELatency = PE2D.PELatency)
 
   // i0
   pingPongRegs2D.io.weightBufferRdy := io.weightBufferRdy
-  loopCtrl2D.io.configParaPorts.assignAllByName(io.configParaPorts)
+  loopCtrl2D.io.config.assignAllByName(io.configParaPorts)
   loopCtrl2D.io.loadConfig   := io.loadConfig
   featureMapBuffer.io.switch := io.fMapSwitch
   pingPongRegs2D.io.ifMapRdy := io.ifMapRdy

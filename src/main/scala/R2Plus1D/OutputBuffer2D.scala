@@ -7,14 +7,14 @@ import Chainsaw.memory._
 
 case class OutputBuffer2D(dataWidth: Int = 8, uc: Int = Parameter.Uc, readLatency: Int = 4, depth: Int = Parameter.outputBuffer2DDepth) extends Component {
   val io = new Bundle {
-    val we    = in Bool ()
-    val wAddr = in UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
-    val wData = in Bits (dataWidth * uc bits)
+    val we:    Bool = in Bool ()
+    val wAddr: UInt = in UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
+    val wData: Bits = in Bits (dataWidth * uc bits)
 
-    val rdEn     = in Bool ()
-    val rAddr    = in UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
-    val rAddrVld = in Bool ()
-    val rData    = out Vec (Bits(dataWidth bits), uc)
+    val rdEn:     Bool      = in Bool ()
+    val rAddr:    UInt      = in UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
+    val rAddrVld: Bool      = in Bool ()
+    val rData:    Vec[Bits] = out Vec (Bits(dataWidth bits), uc)
   }
 
   val ram: SDPURAM = SDPURAM(width = dataWidth * uc, depth = depth)
@@ -23,7 +23,7 @@ case class OutputBuffer2D(dataWidth: Int = 8, uc: Int = Parameter.Uc, readLatenc
   ram.io.addrb  := io.rAddr
   ram.io.wea    := io.we
   ram.io.dina   := io.wData
-  val rData = Bits(dataWidth * uc bits)
+  val rData: Bits = Bits(dataWidth * uc bits)
 
   rData := Mux(io.rAddrVld.d(readLatency), ram.io.doutb, B(0))
   Function.vecZip(io.rData, rData.subdivideIn(dataWidth bits))

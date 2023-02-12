@@ -11,39 +11,43 @@ case class Conv2D(config: Conv2DConfig) {
   def randIfMap():  Array[Array[Array[Array[Int]]]] = Array.fill(Nic)(Array.fill(Nihw)(Array.fill(Nihw)(Array.fill(Nd)(nextInt(10)))))
   def randWeight(): Array[Array[Array[Array[Int]]]] = Array.fill(Nc)(Array.fill(Nic)(Array.fill(Krs)(Array.fill(Krs)(nextInt(10)))))
 
-  def loopUnroll(ifMapTile: Array[Array[Int]], weightTile: Array[Array[Int]]): Array[Array[Int]] = {
+  def loopUnroll(ifMapTile: Array[Array[Int]], weightTile: Array[Array[Int]], printProcession: Boolean = true): Array[Array[Int]] = {
 
     val ofMapTile = Array.fill(divideCeil(Nc, Uc) * ofMapSize)(Array.fill(Uc)(0))
-    for (to <- 0 until divideCeil(Nc, Uc); ti <- 0 until divideCeil(Nic, Uic)) {
+    for (to <- 0 until divideCeil(Nc, Uc)) {
       for (th <- Range(0, Nohw, Toh); tw <- Range(0, Nohw, Tow)) {
-        for (kr <- 0 until Krs; ks <- 0 until Krs) {
-          val weightAddrHead: Int = weightAddr(to, ti, kr, ks)
-          for (sth <- 0 until Toh) {
-            for (stw <- 0 until Tow) {
-              for (od <- 0 until Nd) {
-                val ox = th + sth
-                val oy = tw + stw
-                val ix = ox * stride + kr - padding
-                val iy = oy * stride + ks - padding
-                val ifAddr: Int = ifMapAddr(ti, th, tw, kr, ks, sth, stw, od)
-                val ifMap: Array[Int] =
-                  if (ix < 0 || ix >= Nihw || iy < 0 || iy >= Nihw || th + sth >= Nohw || tw + stw >= Nohw)
-                    Array.fill(Uic)(0)
-                  else
-                    ifMapTile(ifAddr)
+        for (ti <- 0 until divideCeil(Nic, Uic)) {
+          for (kr <- 0 until Krs; ks <- 0 until Krs) {
+            val weightAddrHead: Int = weightAddr(to, ti, kr, ks)
+            for (sth <- 0 until Toh) {
+              for (stw <- 0 until Tow) {
+                for (od <- 0 until Nd) {
+                  val ox = th + sth
+                  val oy = tw + stw
+                  val ix = ox * stride + kr - padding
+                  val iy = oy * stride + ks - padding
+                  val ifAddr: Int = ifMapAddr(ti, th, tw, kr, ks, sth, stw, od)
+                  val ifMap: Array[Int] =
+                    if (ix < 0 || ix >= Nihw || iy < 0 || iy >= Nihw || th + sth >= Nohw || tw + stw >= Nohw)
+                      Array.fill(Uic)(0)
+                    else
+                      ifMapTile(ifAddr)
 
-                val weight: Array[Array[Int]] = Array.tabulate(Uc)(o => weightTile(weightAddrHead + o)).reverse
-                val psum:   Array[Int]        = PEArray(ifMap, weight)
-                val ofAddr = ofMapAddr(to, th, tw, sth, stw, od)
-                if (tw + stw < Nohw && th + sth < Nohw) {
-                  psum.zipWithIndex.foreach { case (p, i) => ofMapTile(ofAddr)(i) += p }
+                  val weight: Array[Array[Int]] = Array.tabulate(Uc)(o => weightTile(weightAddrHead + o)).reverse
+                  val psum:   Array[Int]        = PEArray(ifMap, weight)
+                  val ofAddr = ofMapAddr(to, th, tw, sth, stw, od)
+                  if (tw + stw < Nohw && th + sth < Nohw) {
+                    psum.zipWithIndex.foreach { case (p, i) => ofMapTile(ofAddr)(i) += p }
+                  }
+                  if (printProcession) {
+                    println("-" * 100)
+                    printf(f"od: $od%-4d stw: $stw%-4d sth: $sth%-4d ks: $ks%-4d kr: $kr%-4d ti: $ti%-4d tw: $tw%-4d th: $th%-4d  to: $to%-4d\n")
+                    printf(f"ix: $ix%-4d iy: $iy%-4d ifAddr: $ifAddr%-5d weightAddrHead: $weightAddrHead%-5d\n")
+                    println(f"oh: ${th + sth}%-4d ow: ${tw + stw}%-4d ofMapAddr: $ofAddr%-5d\n")
+                  }
+
                 }
-                println("-" * 100)
-                printf(f"od: $od%-4d stw: $stw%-4d sth: $sth%-4d ks: $ks%-4d kr: $kr%-4d tw: $tw%-4d th: $th%-4d ti: $ti%-4d to: $to%-4d\n")
-                printf(f"ix: $ix%-4d iy: $iy%-4d ifAddr: $ifAddr%-5d weightAddrHead: $weightAddrHead%-5d\n")
-                println(f"oh: ${th + sth}%-4d ow: ${tw + stw}%-4d")
               }
-
             }
           }
         }

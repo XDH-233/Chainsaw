@@ -26,30 +26,14 @@ class LoopCtrl2DTest extends org.scalatest.flatspec.AnyFlatSpec {
         )
       )
       .compile {
-        val dut = LoopCtrl2D(uic = config.Uic, uc = config.Uc)
+        val dut = LoopCtrl2D(uic = config.Uic, uc = config.Uc, PELatency = 4)
         dut
       }
       .doSim { dut =>
         import dut._
         dut.clockDomain.forkStimulus(10)
-        import io.configParaPorts._
-        Nic           #= config.Nic // Uic = 36
-        Nc            #= config.Nc // Uc = 144
-        Nd            #= config.Nd
-        Nohw          #= config.Nohw
-        Krs           #= config.Krs
-        Toh           #= config.Toh
-        Tow           #= config.Tow
+        io.config.assignConfig(config)
         io.loadConfig #= false
-        NcDUcCeil     #= config.NcDUcCeil
-        NicDUicCeil   #= config.NicDUicCeil
-        NohwDTohCei   #= config.NohwDTohCeil
-        NohwDTowCei   #= config.NohwDTowCeil
-        kernelSize    #= config.kernelSize
-        Nihw          #= config.Nihw
-        stride        #= config.stride > 1
-        padding       #= config.padding
-        ifMapSize     #= config.ifMapSize
         clockDomain.waitSampling()
         io.loadConfig #= true
         clockDomain.waitSampling()

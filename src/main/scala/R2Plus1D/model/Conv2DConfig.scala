@@ -1,4 +1,5 @@
 package R2Plus1D.model
+import scala.language.postfixOps
 import scala.math.sqrt
 case class Conv2DConfig(
     val Uic:     Int,
@@ -11,16 +12,16 @@ case class Conv2DConfig(
     val stride:  Int,
     val padding: Int
 ) {
-  val Nohw:         Int = (Nihw + 2 * padding - Krs) / stride + 1
-  val ifMapSize:    Int = Nihw * Nihw * Nd
-  val kernelSize:   Int = Krs * Krs
-  val NicDUicCeil:  Int = divideCeil(Nic, Uic)
-  val NcDUcCeil:    Int = divideCeil(Nc, Uc)
-  val Toh:          Int = sqrt(Uc / Nd).floor.toInt
-  val Tow:          Int = Uc / Nd / Toh
-  val NohwDTohCeil: Int = divideCeil(Nohw, Toh)
-  val NohwDTowCeil: Int = divideCeil(Nohw, Tow)
-
+  val Nohw:                       Int = (Nihw + 2 * padding - Krs) / stride + 1
+  val ifMapSize:                  Int = Nihw * Nihw * Nd
+  val kernelSize:                 Int = Krs * Krs
+  val NicDUicCeil:                Int = divideCeil(Nic, Uic)
+  val NcDUcCeil:                  Int = divideCeil(Nc, Uc)
+  val Toh:                        Int = sqrt(Uc / Nd).floor.toInt
+  val Tow:                        Int = Uc / Nd / Toh
+  val NohwDTohCeil:               Int = divideCeil(Nohw, Toh)
+  val NohwDTowCeil:               Int = divideCeil(Nohw, Tow)
+  val ofMapSize:                  Int = Nohw * Nohw * Nd
   def divideCeil(a: Int, b: Int): Int = (a.toDouble / b.toDouble).ceil.toInt
 
   def display(): Unit = {

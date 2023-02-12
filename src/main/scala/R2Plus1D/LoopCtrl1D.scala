@@ -97,8 +97,7 @@ case class LoopCtrl1D(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc) extends 
   when(ohIfMapAddr.willOverFlow) {
     tiIfMapAddr.inc()
   }
-  val id   = (Mux(io.config.stride, od.value << 1, od.value) + kt.value - io.config.padding).asSInt
-  val fuck = od.value << 1
+  val id = (Mux(io.config.stride, od.value << 1, od.value) + kt.value - io.config.padding).asSInt
   io.ifMapAddrVld := id >= 0 & id < io.config.Nid.asSInt
   io.ifMapRdEn    := io.weightFilled
   io.ifMapAddr    := (tiIfMapAddr.value + ohIfMapAddr.value + owIfMapAddr.value + odIfMapAddr.value + io.config.Kt - io.config.padding).resized

@@ -13,13 +13,13 @@ case class Conv1DTop(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, dataWidth
     val weightWriteData: Bits = in Bits (dataWidth * uc bits)
     val weightRdy:       Bool = in Bool ()
 
-    val we    = in Bool ()
-    val wAddr = in UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
-    val wData = in Bits (dataWidth * uc bits)
+    val we:       Bool = in Bool ()
+    val wAddr:    UInt = in UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
+    val wData:    Bits = in Bits (dataWidth * uc bits)
     val ifMapRdy: Bool = in Bool ()
 
-    val configPorts = slave(new ConfigParaPorts1D())
-    val loadConfig  = in Bool ()
+    val configPorts: ConfigParaPorts1D = slave(new ConfigParaPorts1D())
+    val loadConfig:  Bool              = in Bool ()
   }
 
   val outputBuffer2D: OutputBuffer2D = OutputBuffer2D(dataWidth = dataWidth, uc = uc)
