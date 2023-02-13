@@ -24,13 +24,13 @@ class Conv1DTest extends org.scalatest.flatspec.AnyFlatSpec {
 //    }
     val ofMapTile = conv1D.loopUnroll(conv1D.ifMap2Tile(ifMap), conv1D.weight2Tile(weight))
 
-//    println("------------loop unroll result--------------------")
-//    ofMapTile.foreach(o => println(o.mkString(" ")))
+    println("------------loop unroll result--------------------")
+    ofMapTile.foreach(o => println(o.mkString(" ")))
 
     val ofMap            = conv1D.loop(ifMap, weight)
     val ofMapTileLoopCov = conv1D.ofMap2Tile(ofMap)
-//    println("--------------loop result ------------------------")
-//    ofMapTileLoopCov.foreach(o => println(o.mkString(" ")))
+    println("--------------loop result ------------------------")
+    ofMapTileLoopCov.foreach(o => println(o.mkString(" ")))
 
     ofMapTile.zip(ofMapTileLoopCov).foreach { case (u, l) => u.zip(l).foreach { case (a, b) => assert(a == b) } }
     println("loop result equal loop unroll result! test pass!")

@@ -5,8 +5,10 @@ import scala.language.postfixOps
 import Chainsaw.xilinx._
 import scala.util.Random.nextInt
 
-class AccRAM2DTest extends org.scalatest.flatspec.AnyFlatSpec {
-  "accRam2D" should "use BRAM" in MyVivadoAction(AccRAM2D(), "acc_ram_2D", SYNTH)
+class AccRAMTest extends org.scalatest.flatspec.AnyFlatSpec {
+  "accRam2D" should "use BRAM" in MyVivadoAction(AccRAM(uoc = 144, depth = 144), "acc_ram_2D", SYNTH)
+
+  "accRam1D" should "use BRAM" in MyVivadoAction(AccRAM(uoc = 36, depth = 3136, dataWidth = 28), "acc_ram_1D", SYNTH)
 
   it should "work right " in SimConfig.withFstWave
     .withConfig(
@@ -16,7 +18,7 @@ class AccRAM2DTest extends org.scalatest.flatspec.AnyFlatSpec {
       )
     )
     .compile {
-      val dut = AccRAM2D(dataWidth = 8, uoc = 10)
+      val dut = AccRAM(dataWidth = 8, uoc = 10, depth = 10)
       dut
     }
     .doSim { dut =>

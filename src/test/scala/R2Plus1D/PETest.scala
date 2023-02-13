@@ -22,7 +22,7 @@ case class PETest() extends AnyFlatSpec {
       )
     )
     .compile {
-      val dut: PE = PE(uic = 36, uoc = 144)
+      val dut: PE = PE(uic = 2, uoc = 6, width = 4)
       dut
     }
     .doSim { dut: PE =>

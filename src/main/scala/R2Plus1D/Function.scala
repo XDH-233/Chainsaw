@@ -11,7 +11,7 @@ object Function {
     }
   }
 
-  def vecZip(a: Vec[Bits], b: Vec[Bits]): Unit = {
+  def vecZip[T <: Data](a: Vec[T], b: Vec[T]): Unit = {
     a.zip(b).foreach { case (p, q) => p := q }
   }
 
@@ -23,5 +23,9 @@ object Function {
       shiftLoad(pong, wIn, en)
       vecZip(wOut, ping)
     }
+  }
+
+  def CounterSum(g: GeneralCounter*): UInt = {
+    g.map(_.value).reduce(_ + _)
   }
 }

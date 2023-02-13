@@ -6,7 +6,7 @@ import Chainsaw.xilinx._
 
 class Conv2DTopTest extends org.scalatest.flatspec.AnyFlatSpec {
 
-  "Conv2DTop" should "work in high frequency" in MyVivadoAction(design = Conv2DTop(dataWidth = 8, uic = 36, uc = 144), name = "conv_2D_top", flowType = SYNTH)
+  "Conv2DTop" should "work in high frequency" in MyVivadoAction(design = Conv2DTop(uic = 36, uc = 144), name = "conv_2D_top", flowType = SYNTH)
 
   it should "work right" in {
     // -------------------Conv2D model----------------------------------------------------------------------------------
@@ -16,7 +16,7 @@ class Conv2DTopTest extends org.scalatest.flatspec.AnyFlatSpec {
     config.display()
     val ifMap  = conv2D.randIfMap()
     val weight = conv2D.randWeight()
-    conv2D.loopUnroll(conv2D.ifMap2Mem(ifMap), conv2D.weight2Mem(weight))
+    conv2D.loopUnroll(conv2D.ifMap2Mem(ifMap), conv2D.weight2Mem(weight), false)
     // ------------------- simulation ----------------------------------------------------------------------------------
     SimConfig.withFstWave
       .withConfig(
@@ -26,7 +26,7 @@ class Conv2DTopTest extends org.scalatest.flatspec.AnyFlatSpec {
         )
       )
       .compile {
-        val dut = Conv2DTop(uic = config.Uic, uc = config.Uc, dataWidth = 8)
+        val dut = Conv2DTop(uic = config.Uic, uc = config.Uc)
         dut
       }
       .doSim { dut =>
@@ -48,6 +48,7 @@ class Conv2DTopTest extends org.scalatest.flatspec.AnyFlatSpec {
         clockDomain.waitSampling(15)
         io.ifMapRdy #= true
         clockDomain.waitSampling(3000)
+        println(dut.PE2D.PELatency)
       }
 
   }

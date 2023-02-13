@@ -28,6 +28,7 @@ case class PingPongRegs2D(uic: Int = 36, uoc: Int = 144, width: Int = 8, readLat
   val load:        Bool      = io.readEn.d(readLatency)
   val ping, pong:  Vec[Bits] = Vec(Reg(Bits(uic * width bits)), uoc)
 
+  val weightInVec: Vec[Bits] = io.weightIn.subdivideIn(width bits)
   Function.pingPongLoadAndOut(ping, pong, io.weightIn, io.weightOut, loadPing, load)
 
   val FSM = new StateMachine {

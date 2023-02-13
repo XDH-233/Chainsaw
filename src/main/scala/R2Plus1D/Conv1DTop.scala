@@ -25,14 +25,17 @@ case class Conv1DTop(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, dataWidth
   val outputBuffer2D: OutputBuffer2D = OutputBuffer2D(dataWidth = dataWidth, uc = uc)
   val weightBuffer1D: WeightBuffer   = WeightBuffer(dataWidth = dataWidth, uic = uc, depth = Parameter.weightBuffer1DDepth)
   val PE1D:           PE             = PE(uic = uc, uoc = uoc, width = dataWidth)
-  val loopCtrl1D:     LoopCtrl1D     = LoopCtrl1D(uc = uc, uoc = uoc)
-  val pingPongRegs1D: PingPongRegs1D = PingPongRegs1D(dataWidth = dataWidth, uc = uc, uoc = uoc)
+  val accRAM1D:       AccRAM         = AccRAM(uoc = uoc, depth = Parameter.ofMapMaxOwOhSize1D, dataOutWidth = dataWidth)
+  val loopCtrl1D: LoopCtrl1D =
+    LoopCtrl1D(uc = uc, uoc = uoc, readLatencyURAM = weightBuffer1D.readLatency, readLatencyBRAM = accRAM1D.readLatency, PELatency = PE1D.PELatency)
+  val pingPongRegs1D:   PingPongRegs1D   = PingPongRegs1D(dataWidth = dataWidth, uc = uc, uoc = uoc)
+  val featureMapBuffer: FeatureMapBuffer = FeatureMapBuffer(width = dataWidth, depth = Parameter.featureMapDepth, uic = uoc)
 
   // io
   loopCtrl1D.io.config.assignAllByName(io.configPorts)
   loopCtrl1D.io.loadConfig      := io.loadConfig
   pingPongRegs1D.io.loadConfig  := io.loadConfig
-  pingPongRegs1D.io.ofMapSize2D := io.configPorts.ofMapsize2D
+  pingPongRegs1D.io.ofMapSize2D := io.configPorts.ofMapSizeOwOh
   pingPongRegs1D.io.weightRdy   := io.weightRdy
   pingPongRegs1D.io.ifMapRdy    := io.ifMapRdy
 
@@ -62,4 +65,28 @@ case class Conv1DTop(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, dataWidth
   outputBuffer2D.io.rdEn     := loopCtrl1D.io.ifMapRdEn
   outputBuffer2D.io.rAddr    := loopCtrl1D.io.ifMapAddr
   outputBuffer2D.io.rAddrVld := loopCtrl1D.io.ifMapAddrVld
+  // feature map
+
+  // accRam1D
+  accRAM1D.io.writeAcc := loopCtrl1D.io.writeAcc
+  accRAM1D.io.addr     := loopCtrl1D.io.accAddr
+  accRAM1D.io.doutEn   := loopCtrl1D.io.doutEn
+  accRAM1D.io.wData.zip(PE1D.io.partialSum).foreach { case (w, p) => w := p.resized }
+
+  // PE <- outputBuffer2D, ping-pong regs
+  PE1D.io.ifMap.zip(outputBuffer2D.io.rData).foreach { case (p, i) => p := i.asSInt }
+  val weightOut: Seq[Vec[Bits]] = pingPongRegs1D.io.weightOut.toSeq.map(_.subdivideIn(dataWidth bits))
+  PE1D.io.weight.zipWithIndex.foreach { case (p, i) => p := weightOut(i / uc)(i % uc).asSInt }
+  // feature map write
+  featureMapBuffer.io.switch := False
+  featureMapBuffer.io.we     := loopCtrl1D.io.ofMapWriteEn
+  featureMapBuffer.io.wData  := accRAM1D.io.dout
+  featureMapBuffer.io.wAddr  := loopCtrl1D.io.ofMapAddr
+
+  // feature map read
+  featureMapBuffer.io.readEn2DPE.clear()
+  featureMapBuffer.io.readEn1DPE.clear()
+  featureMapBuffer.io.rAddr2DPE.clearAll()
+  featureMapBuffer.io.rAddr1DPE.clearAll()
+  featureMapBuffer.io.rAddr2DPEVld.clear()
 }

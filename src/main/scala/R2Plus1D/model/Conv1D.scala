@@ -29,20 +29,24 @@ case class Conv1D(config: Conv1DConfig) {
 
     val ofMapTile = Array.fill(divideCeil(Noc, Uoc) * ofMapSize)(Array.fill(Uoc)(0))
 
-    for (to <- 0 until divideCeil(Noc, Uoc); ti <- 0 until divideCeil(Nc, Uc)) {
-      for (od <- 0 until Nod; kt <- 0 until Kt) {
-        val weightAddrHead = to * divideCeil(Nc, Uc) * Uoc * Kt + ti * Uoc * Kt + kt * Uoc
-        for (oh <- 0 until Nhw; ow <- 0 until Nhw) {
-          val id        = od * stride + kt - padding
-          val ifMapAddr = ti * ifMapSize + oh * Nhw * Nid + ow * Nid + id
-          val ifMap     = if (id >= Nid || id < 0) Array.fill(Uc)(0) else ifMapTile(ifMapAddr)
-          val weight    = Array.tabulate(Uoc)(o => weightTile(weightAddrHead + o)).reverse
-          val psum      = PEArray(ifMap, weight)
-          val ofMapAddr = to * ofMapSize + oh * Nhw * Nod + ow * Nod + od
-          psum.zipWithIndex.foreach { case (p, i) => ofMapTile(ofMapAddr)(i) += p }
-          println("-" * 100)
-          printf(f"ow: $ow%-4d oh: $oh%-4d kt: $kt%-4d od: $od%-4d ti: $ti%-4d to: $to%-4d\n")
-          printf(f"id: $id%-4d ifAddr: $ifMapAddr%-4d weightAddrHead: $weightAddrHead%-4d\n")
+    for (to <- 0 until divideCeil(Noc, Uoc)) {
+      for (od <- 0 until Nod) {
+        for (ti <- 0 until divideCeil(Nc, Uc)) {
+          for (kt <- 0 until Kt) {
+            val weightAddrHead = to * divideCeil(Nc, Uc) * Uoc * Kt + ti * Uoc * Kt + kt * Uoc
+            for (oh <- 0 until Nhw; ow <- 0 until Nhw) {
+              val id        = od * stride + kt - padding
+              val ifMapAddr = ti * ifMapSize + oh * Nhw * Nid + ow * Nid + id
+              val ifMap     = if (id >= Nid || id < 0) Array.fill(Uc)(0) else ifMapTile(ifMapAddr)
+              val weight    = Array.tabulate(Uoc)(o => weightTile(weightAddrHead + o)).reverse
+              val psum      = PEArray(ifMap, weight)
+              val ofMapAddr = to * ofMapSize + oh * Nhw * Nod + ow * Nod + od
+              psum.zipWithIndex.foreach { case (p, i) => ofMapTile(ofMapAddr)(i) += p }
+              println("-" * 100)
+              printf(f"ow: $ow%-4d oh: $oh%-4d kt: $kt%-4d  ti: $ti%-4d to: od: $od%-4d $to%-4d\n")
+              printf(f"id: $id%-4d ifAddr: $ifMapAddr%-4d weightAddrHead: $weightAddrHead%-4d ofMapAddr: $ofMapAddr%-4d\n")
+            }
+          }
         }
       }
     }

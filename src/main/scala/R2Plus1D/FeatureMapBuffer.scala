@@ -44,5 +44,5 @@ case class FeatureMapBuffer(width: Int = 512, depth: Int = 50176, uic: Int = 36,
     urams.head.portRead(io.readEn1DPE, io.rAddr1DPE, io.rData1DPE, "b")
   }
 
-  io.rData2DPE.zip(readDta2DPERAM.subdivideIn(width bits)).foreach { case (i, r) => i := Mux(io.rAddr2DPEVld, r, B(0)) }
+  io.rData2DPE.zip(readDta2DPERAM.subdivideIn(width bits)).foreach { case (i, r) => i := Mux(io.rAddr2DPEVld.d(readLatency), r, B(0)) }
 }

@@ -14,11 +14,15 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
     val weightWriteAddr: UInt = in UInt (log2Up(weightBuffer2DDepth) bits)
     val weightWriteData: Bits = in Bits (dataWidth * uic bits)
 
-    val fMapSwitch:      Bool              = in Bool ()
-    val fMapWe:          Bool              = in Bool ()
-    val fMapWData:       Bits              = in Bits (dataWidth * uic bits)
-    val fMapWAddr:       UInt              = in UInt (log2Up(featureMapDepth) bits)
-    val ifMapRdy:        Bool              = in Bool ()
+    val fMapSwitch: Bool = in Bool ()
+    val fMapWe:     Bool = in Bool ()
+    val fMapWData:  Bits = in Bits (dataWidth * uic bits)
+    val fMapWAddr:  UInt = in UInt (log2Up(featureMapDepth) bits)
+    val ifMapRdy:   Bool = in Bool ()
+
+    val outputBufferRd:    Bool = in Bool ()
+    val outputBufferRAddr: UInt = in UInt (log2Up(outputBuffer2DDepth) bits)
+
     val weightBufferRdy: Bool              = in Bool ()
     val loadConfig:      Bool              = in Bool ()
     val configParaPorts: ConfigParaPorts2D = slave(new ConfigParaPorts2D(16))
@@ -28,7 +32,9 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
   val weightBuffer2D:   WeightBuffer     = WeightBuffer(dataWidth = dataWidth, depth = weightBuffer2DDepth, uic = uic)
   val featureMapBuffer: FeatureMapBuffer = FeatureMapBuffer(width = dataWidth, depth = featureMapDepth, uic = uic)
   val pingPongRegs2D:   PingPongRegs2D   = PingPongRegs2D(width = dataWidth, uoc = uc, uic = uic)
-  val loopCtrl2D:       LoopCtrl2D       = LoopCtrl2D(uic = uic, uc = uc, PELatency = PE2D.PELatency)
+  val accRAM2D:         AccRAM           = AccRAM(uoc = uc, depth = uc)
+  val loopCtrl2D:       LoopCtrl2D       = LoopCtrl2D(uic = uic, uc = uc, PELatency = PE2D.PELatency, readLatencyBRAM = accRAM2D.readLatency)
+  val outputBuffer2D:   OutputBuffer2D   = OutputBuffer2D(dataWidth = dataWidth, uc = uc, depth = outputBuffer2DDepth)
 
   // i0
   pingPongRegs2D.io.weightBufferRdy := io.weightBufferRdy
@@ -36,6 +42,8 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
   loopCtrl2D.io.loadConfig   := io.loadConfig
   featureMapBuffer.io.switch := io.fMapSwitch
   pingPongRegs2D.io.ifMapRdy := io.ifMapRdy
+  outputBuffer2D.io.rAddr    := io.outputBufferRAddr
+  outputBuffer2D.io.rdEn     := io.outputBufferRd
 
   // weight write
   weightBuffer2D.io.writeEn   := io.weightWriteEn
@@ -70,4 +78,17 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
   featureMapBuffer.io.readEn1DPE.clear()
   featureMapBuffer.io.rAddr1DPE.clearAll()
 
+  // accRAM
+  accRAM2D.io.writeAcc := loopCtrl2D.io.writeAcc
+  accRAM2D.io.addr     := loopCtrl2D.io.accRamAddr
+  accRAM2D.io.doutEn   := loopCtrl2D.io.doutEn
+  accRAM2D.io.wData.zip(PE2D.io.partialSum).foreach { case (w, p) => w := p.resized }
+  // outputBuffer 2D write <- loopCtrl2D, accRAM
+  outputBuffer2D.io.wData := accRAM2D.io.dout
+  outputBuffer2D.io.we    := accRAM2D.io.doutEn & loopCtrl2D.io.ofMapAddrVld
+  outputBuffer2D.io.wAddr := loopCtrl2D.io.ofMapAddr
+
+  // PE <- ping-pong out
+  val weightOut: Seq[Vec[Bits]] = pingPongRegs2D.io.weightOut.map(_.subdivideIn(dataWidth bits))
+  PE2D.io.weight.zipWithIndex.foreach { case (p, i) => p := weightOut(i / uic)(i % uic).asSInt }
 }
