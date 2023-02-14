@@ -5,10 +5,12 @@ import spinal.lib._
 import scala.language.postfixOps
 import Chainsaw._
 
-case class LoopCtrl1D(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, readLatencyURAM: Int, readLatencyBRAM: Int, PELatency: Int) extends Component { // FIXME uc may be hardware to exe the 0D conv
+case class LoopCtrl1D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, readLatencyURAM: Int, readLatencyBRAM: Int, PELatency: Int)
+    extends Component { // FIXME uc may be hardware to exe the 0D conv
   val io = new Bundle {
     val loadConfig: Bool              = in Bool ()
-    val config:     ConfigParaPorts1D = slave(new ConfigParaPorts1D())
+    val config:     ConfigParaPorts1D = in(ConfigParaPorts1D())
+    val shortCut:   Bool              = in Bool ()
 
     val weightAddrBase:  UInt = out UInt (log2Up(Parameter.weightBuffer1DDepth) bits)
     val weightLoadedNum: UInt = out(UInt(log2Up(uoc + 1) bits)) setAsReg () init 0
@@ -28,8 +30,8 @@ case class LoopCtrl1D(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, readLate
 
   }
 
-  val ow:    GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nhw, en = io.loadConfig)
-  val oh:    GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nhw, en = io.loadConfig)
+  val ow:    GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nohw, en = io.loadConfig)
+  val oh:    GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nohw, en = io.loadConfig)
   val kt:    GeneralCounter = GeneralCounter(step = U(1), top = io.config.Kt, en = io.loadConfig)
   val ti:    GeneralCounter = GeneralCounter(step = U(1), top = io.config.NcDUcCeil, en = io.loadConfig)
   val tiNc:  GeneralCounter = GeneralCounter(step = U(uc), top = io.config.Nc, en = io.loadConfig)
@@ -93,10 +95,10 @@ case class LoopCtrl1D(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, readLate
     top  = Mux(io.config.stride, io.config.Nod << 1, io.config.Nod),
     en   = io.loadConfig
   )
-  val owIfMapAddr: GeneralCounter = GeneralCounter(step = io.config.Nid, top = io.config.Nid * io.config.Nhw, en = io.loadConfig)
+  val owIfMapAddr: GeneralCounter = GeneralCounter(step = io.config.Nid, top = io.config.Nid * io.config.Nohw, en = io.loadConfig)
   val ohIfMapAddr: GeneralCounter = GeneralCounter(
-    step = io.config.Nhw * io.config.Nid,
-    top  = io.config.Nhw * io.config.Nid * io.config.Nhw,
+    step = io.config.Nohw * io.config.Nid,
+    top  = io.config.Nohw * io.config.Nid * io.config.Nohw,
     en   = io.loadConfig
   )
   val tiIfMapAddr: GeneralCounter = GeneralCounter(step = io.config.ifMapSize, top = io.config.NcDUcCeil * io.config.ifMapSize, en = io.loadConfig)
@@ -117,10 +119,10 @@ case class LoopCtrl1D(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, readLate
   io.ifMapRdEn    := io.weightFilled
   io.ifMapAddr    := (odIfMapAddr.value + tiIfMapAddr.value + ohIfMapAddr.value + owIfMapAddr.value + kt.value - io.config.padding).resized
   // ---------------------- of Map addr accumulation -------------------------------------------------------------------
-  val owOfMapAddr: GeneralCounter = GeneralCounter(step = io.config.Nod, top = io.config.Nhw * io.config.Nod, en = io.loadConfig)
+  val owOfMapAddr: GeneralCounter = GeneralCounter(step = io.config.Nod, top = io.config.Nohw * io.config.Nod, en = io.loadConfig)
   val ohOfMapAddr: GeneralCounter = GeneralCounter(
-    step = io.config.Nhw * io.config.Nod,
-    top  = io.config.Nhw * io.config.Nhw * io.config.Nod,
+    step = io.config.Nohw * io.config.Nod,
+    top  = io.config.Nohw * io.config.Nohw * io.config.Nod,
     en   = io.loadConfig
   )
   val odOfMapAddr: GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nod, en = io.loadConfig)
@@ -141,5 +143,5 @@ case class LoopCtrl1D(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, readLate
   io.ofMapAddr    := Function.CounterSum(owOfMapAddr, ohOfMapAddr, odOfMapAddr, toOfMapAddr).resized
   io.writeAcc     := io.weightFilled.d(readLatencyURAM + PELatency)
   io.doutEn       := ti.willOverFlowIfInc.d(readLatencyURAM + PELatency)
-  io.accAddr      := (ow.value + oh.value * io.config.Nhw).d(readLatencyURAM + PELatency).resized
+  io.accAddr      := (ow.value + oh.value * io.config.Nohw).d(readLatencyURAM + PELatency).resized
 }

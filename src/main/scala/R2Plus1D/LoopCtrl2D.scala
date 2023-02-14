@@ -12,7 +12,7 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
   val width = 16
   val io = new Bundle {
 
-    val config: ConfigParaPorts2D = slave(new ConfigParaPorts2D(width))
+    val config: ConfigParaPorts2D = in(ConfigParaPorts2D(width))
 
     val weightRdy, fMapRdy, loadConfig: Bool = in Bool ()
     val readDone:                       Bool = in Bool ()

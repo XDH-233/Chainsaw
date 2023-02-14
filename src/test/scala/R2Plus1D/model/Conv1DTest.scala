@@ -3,8 +3,9 @@ package R2Plus1D.model
 class Conv1DTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   it should "work without err" in {
-    val config = Conv1DConfig(Uc = 2, Uoc = 2, Nc = 3, Noc = 3, Nid = 5, Nhw = 2, Kt = 3, stride = 2, padding = 1)
+    val config = ConvConfig(Uc = 2, Uoc = 2, Nc = 3, Noc = 3, Nid = 5, Nihw = 2, K = 3, stride = 2, padding = 1, convType = ConvType.D1)
     val conv1D = Conv1D(config)
+    config.display()
 
     val ifMap  = conv1D.randomIfMap
     val weight = conv1D.randomWeight

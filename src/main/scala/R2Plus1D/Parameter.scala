@@ -6,6 +6,14 @@ object Parameter {
   val Uoc   = 36
   val WIDTH = 8
 
+  val NicMax = 512
+  val NcMax  = 1152
+  val NocMax = 512
+
+  val NihwMax2D = 112
+  val NohwMax2D = 56
+  val NihwMax1D = 56
+  val NohwMax1D = 56
   val featureMapDepth: Int = 100 * 4 * 1024 // 100k
 
   val weightBuffer2DDepth: Int = 152 * 1024 // 152k

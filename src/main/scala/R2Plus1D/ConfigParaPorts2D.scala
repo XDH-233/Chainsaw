@@ -7,7 +7,7 @@ import Chainsaw._
 import R2Plus1D.Parameter.{ifMapSizeMax2D, ofMapSizeMax2D}
 import spinal.lib._
 
-class ConfigParaPorts2D(width: Int) extends Bundle with IMasterSlave {
+case class ConfigParaPorts2D(width: Int) extends Bundle {
   val Nic, Nc, Nohw, Nd, Krs, Tow, Toh, Nihw: UInt = UInt(width bits)
   val NcDUcCeil, NicDUicCeil:                 UInt = UInt(4 bits)
   val kernelSize:                             UInt = UInt(6 bits)
@@ -17,15 +17,12 @@ class ConfigParaPorts2D(width: Int) extends Bundle with IMasterSlave {
   val NohwDTowCei:                            UInt = UInt(width bits)
   val stride:                                 Bool = Bool() // 0 -> 1, 1 -> 2
   val padding:                                UInt = UInt(3 bits)
-  override def asMaster(): Unit = {
-    out(Nic, Nc, Nohw, Nd, Krs, Tow, Toh, Nihw, NcDUcCeil, NicDUicCeil, kernelSize, ifMapSize, NohwDTowCei, NohwDTohCei, stride, padding, ofMapSize)
-  }
 
-  def assignConfig(config: model.Conv2DConfig): Unit = {
+  def assignConfig(config: model.ConvConfig): Unit = {
     Nic         #= config.Nic
     Nc          #= config.Nc
     Nohw        #= config.Nohw
-    Krs         #= config.Krs
+    Krs         #= config.K
     Tow         #= config.Tow
     Toh         #= config.Toh
     Nihw        #= config.Nihw
@@ -38,7 +35,6 @@ class ConfigParaPorts2D(width: Int) extends Bundle with IMasterSlave {
     stride      #= config.stride > 1
     padding     #= config.padding
     ofMapSize   #= config.ofMapSize
-    Nd          #= config.Nd
+    Nd          #= config.Nid
   }
-  override type RefOwnerType = this.type
 }

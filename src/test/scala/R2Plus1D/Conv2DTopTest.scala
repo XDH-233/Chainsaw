@@ -3,6 +3,7 @@ import spinal.core._
 import spinal.core.sim._
 import scala.language.postfixOps
 import Chainsaw.xilinx._
+import R2Plus1D.model.ConvType
 
 class Conv2DTopTest extends org.scalatest.flatspec.AnyFlatSpec {
 
@@ -11,7 +12,7 @@ class Conv2DTopTest extends org.scalatest.flatspec.AnyFlatSpec {
   it should "work right" in {
     // -------------------Conv2D model----------------------------------------------------------------------------------
     val config =
-      model.Conv2DConfig(Uic = 4, Uc = 12, Nic = 9, Nc = 16, Nd = 2, Nihw = 5, Krs = 3, stride = 2, padding = 2)
+      model.ConvConfig(Uic = 4, Uc = 12, Nic = 9, Nc = 16, Nid = 2, Nihw = 5, K = 3, stride = 2, padding = 2, convType = ConvType.D2)
     val conv2D = model.Conv2D(config)
     config.display()
     val ifMap  = conv2D.randIfMap()

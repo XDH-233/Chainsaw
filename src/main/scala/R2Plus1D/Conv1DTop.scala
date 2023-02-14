@@ -18,7 +18,7 @@ case class Conv1DTop(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, dataWidth
     val wData:    Bits = in Bits (dataWidth * uc bits)
     val ifMapRdy: Bool = in Bool ()
 
-    val configPorts: ConfigParaPorts1D = slave(new ConfigParaPorts1D())
+    val configPorts: ConfigParaPorts1D = in (new ConfigParaPorts1D())
     val loadConfig:  Bool              = in Bool ()
   }
 

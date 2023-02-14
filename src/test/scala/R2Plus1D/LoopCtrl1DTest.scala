@@ -4,12 +4,14 @@ import spinal.core.sim._
 
 import scala.language.postfixOps
 import Chainsaw.xilinx._
+import scala.tools.nsc.interactive.ContextTrees
+import R2Plus1D.model.ConvType
 
 class LoopCtrl1DTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   it should "work right " in {
     // ----------------------- model ------------------------------------------------------------------------------------
-    val config = model.Conv1DConfig(Uc = 2, Uoc = 6, Nc = 3, Noc = 8, Nid = 5, Nhw = 3, Kt = 3, stride = 2, padding = 1)
+    val config = model.ConvConfig(Uc = 2, Uoc = 6, Nc = 3, Noc = 8, Nid = 5, Nihw = 3, K = 3, stride = 2, padding = 1, convType = ConvType.D1)
     config.display()
     val conv1D = model.Conv1D(config)
     val ifMap  = conv1D.randomIfMap
@@ -32,8 +34,8 @@ class LoopCtrl1DTest extends org.scalatest.flatspec.AnyFlatSpec {
         dut.clockDomain.forkStimulus(10)
         io.loadConfig #= false
 
-        io.config.Nhw         #= config.Nhw
-        io.config.Kt          #= config.Kt
+        io.config.Nihw        #= config.Nihw
+        io.config.Kt          #= config.K
         io.config.Nid         #= config.Nid
         io.config.Nod         #= config.Nod
         io.config.Nc          #= config.Nc

@@ -25,7 +25,7 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
 
     val weightBufferRdy: Bool              = in Bool ()
     val loadConfig:      Bool              = in Bool ()
-    val configParaPorts: ConfigParaPorts2D = slave(new ConfigParaPorts2D(16))
+    val configParaPorts: ConfigParaPorts2D = in(ConfigParaPorts2D(16))
   }
 
   val PE2D:             PE               = PE(uic = uic, uoc = uc, width = dataWidth)
