@@ -25,7 +25,7 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
 
     val weightBufferRdy: Bool              = in Bool ()
     val loadConfig:      Bool              = in Bool ()
-    val configParaPorts: ConfigParaPorts2D = in(ConfigParaPorts2D(16))
+    val configParaPorts: ConfigParaPorts2D = in(ConfigParaPorts2D())
   }
 
   val PE2D:             PE               = PE(uic = uic, uoc = uc, width = dataWidth)
@@ -34,7 +34,7 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
   val pingPongRegs2D:   PingPongRegs2D   = PingPongRegs2D(width = dataWidth, uoc = uc, uic = uic)
   val accRAM2D:         AccRAM           = AccRAM(uoc = uc, depth = uc)
   val loopCtrl2D:       LoopCtrl2D       = LoopCtrl2D(uic = uic, uc = uc, PELatency = PE2D.PELatency, readLatencyBRAM = accRAM2D.readLatency)
-  val outputBuffer2D:   OutputBuffer2D   = OutputBuffer2D(dataWidth = dataWidth, uc = uc, depth = outputBuffer2DDepth)
+  val outputBuffer2D:   OutputBuffer     = OutputBuffer(dataWidth = dataWidth, uc = uc, depth = outputBuffer2DDepth)
 
   // i0
   pingPongRegs2D.io.weightBufferRdy := io.weightBufferRdy
@@ -84,8 +84,8 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
   accRAM2D.io.doutEn   := loopCtrl2D.io.doutEn
   accRAM2D.io.wData.zip(PE2D.io.partialSum).foreach { case (w, p) => w := p.resized }
   // outputBuffer 2D write <- loopCtrl2D, accRAM
-  outputBuffer2D.io.wData := accRAM2D.io.dout
-  outputBuffer2D.io.we    := accRAM2D.io.doutEn & loopCtrl2D.io.ofMapAddrVld
+  outputBuffer2D.io.wData := accRAM2D.io.doutReLU
+  outputBuffer2D.io.we    := loopCtrl2D.io.ofMapWe & loopCtrl2D.io.ofMapAddrVld
   outputBuffer2D.io.wAddr := loopCtrl2D.io.ofMapAddr
 
   // PE <- ping-pong out

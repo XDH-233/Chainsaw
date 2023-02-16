@@ -5,9 +5,8 @@ import util.Random.nextInt
 
 case class Conv2D(config: ConvConfig) {
   import config._
-
-  private val ofMapSize: Int = Nod * Nohw * Nohw
-
+  val Nc = Noc
+  val Uc = Uoc
   def randIfMap():  Array[Array[Array[Array[Int]]]] = Array.fill(Nic)(Array.fill(Nihw)(Array.fill(Nihw)(Array.fill(Nid)(nextInt(10)))))
   def randWeight(): Array[Array[Array[Array[Int]]]] = Array.fill(Nc)(Array.fill(Nic)(Array.fill(K)(Array.fill(K)(nextInt(10)))))
 

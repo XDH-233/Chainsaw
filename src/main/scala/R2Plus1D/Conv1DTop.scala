@@ -18,14 +18,16 @@ case class Conv1DTop(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, dataWidth
     val wData:    Bits = in Bits (dataWidth * uc bits)
     val ifMapRdy: Bool = in Bool ()
 
-    val configPorts: ConfigParaPorts1D = in (new ConfigParaPorts1D())
+    val configPorts: ConfigParaPorts1D = in(ConfigParaPorts1D())
     val loadConfig:  Bool              = in Bool ()
+    val shortCut:    Bool              = in Bool ()
+
   }
 
-  val outputBuffer2D: OutputBuffer2D = OutputBuffer2D(dataWidth = dataWidth, uc = uc)
-  val weightBuffer1D: WeightBuffer   = WeightBuffer(dataWidth = dataWidth, uic = uc, depth = Parameter.weightBuffer1DDepth)
-  val PE1D:           PE             = PE(uic = uc, uoc = uoc, width = dataWidth)
-  val accRAM1D:       AccRAM         = AccRAM(uoc = uoc, depth = Parameter.ofMapMaxOwOhSize1D, dataOutWidth = dataWidth)
+  val outputBuffer2D: OutputBuffer = OutputBuffer(dataWidth = dataWidth, uc = uc)
+  val weightBuffer1D: WeightBuffer = WeightBuffer(dataWidth = dataWidth, uic = uc, depth = Parameter.weightBuffer1DDepth)
+  val PE1D:           PE           = PE(uic = uc, uoc = uoc, width = dataWidth)
+  val accRAM1D:       AccRAM       = AccRAM(uoc = uoc, depth = Parameter.ofMapMaxOwOhSize1D, dataOutWidth = dataWidth)
   val loopCtrl1D: LoopCtrl1D =
     LoopCtrl1D(uc = uc, uoc = uoc, readLatencyURAM = weightBuffer1D.readLatency, readLatencyBRAM = accRAM1D.readLatency, PELatency = PE1D.PELatency)
   val pingPongRegs1D:   PingPongRegs1D   = PingPongRegs1D(dataWidth = dataWidth, uc = uc, uoc = uoc)
@@ -38,6 +40,7 @@ case class Conv1DTop(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, dataWidth
   pingPongRegs1D.io.ofMapSize2D := io.configPorts.ofMapSizeOwOh
   pingPongRegs1D.io.weightRdy   := io.weightRdy
   pingPongRegs1D.io.ifMapRdy    := io.ifMapRdy
+  loopCtrl1D.io.shortCut        := io.shortCut
 
   // weight buffer write
   weightBuffer1D.io.switch    := io.weightSwitch
@@ -65,7 +68,6 @@ case class Conv1DTop(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, dataWidth
   outputBuffer2D.io.rdEn     := loopCtrl1D.io.ifMapRdEn
   outputBuffer2D.io.rAddr    := loopCtrl1D.io.ifMapAddr
   outputBuffer2D.io.rAddrVld := loopCtrl1D.io.ifMapAddrVld
-  // feature map
 
   // accRam1D
   accRAM1D.io.writeAcc := loopCtrl1D.io.writeAcc
@@ -73,14 +75,14 @@ case class Conv1DTop(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, dataWidth
   accRAM1D.io.doutEn   := loopCtrl1D.io.doutEn
   accRAM1D.io.wData.zip(PE1D.io.partialSum).foreach { case (w, p) => w := p.resized }
 
-  // PE <- outputBuffer2D, ping-pong regs
+  // PE1D <- outputBuffer2D, ping-pong regs
   PE1D.io.ifMap.zip(outputBuffer2D.io.rData).foreach { case (p, i) => p := i.asSInt }
   val weightOut: Seq[Vec[Bits]] = pingPongRegs1D.io.weightOut.toSeq.map(_.subdivideIn(dataWidth bits))
   PE1D.io.weight.zipWithIndex.foreach { case (p, i) => p := weightOut(i / uc)(i % uc).asSInt }
   // feature map write
   featureMapBuffer.io.switch := False
   featureMapBuffer.io.we     := loopCtrl1D.io.ofMapWriteEn
-  featureMapBuffer.io.wData  := accRAM1D.io.dout
+  featureMapBuffer.io.wData  := accRAM1D.io.doutReLU
   featureMapBuffer.io.wAddr  := loopCtrl1D.io.ofMapAddr
 
   // feature map read

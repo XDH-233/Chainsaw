@@ -4,7 +4,7 @@ class Conv2DTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   it should "work normally" in { // attention: it will consume about 6 minutes
     val config: ConvConfig =
-      ConvConfig(Uic = 4, Uc = 12, Nic = 9, Nc = 8, Nid = 2, Nihw = 5, K = 3, stride = 2, padding = 2, convType = ConvType.D2)
+      ConvConfig(Uic = 4, Uoc = 12, Nic = 9, Noc = 8, Nid = 2, Nihw = 5, K = 3, stride = 2, padding = 2, convType = ConvType.D2)
     val conv2D = Conv2D(config)
     config.display()
     val ifMap  = conv2D.randIfMap()

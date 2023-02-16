@@ -11,7 +11,7 @@ import scala.language.postfixOps
 case class PingPongRegs2D(uic: Int = 36, uoc: Int = 144, width: Int = 8, readLatency: Int = 4) extends Component {
   val io = new Bundle {
     val weightBufferRdy: Bool      = in Bool ()
-    val weightLoadedNum: UInt      = in UInt (log2Up(uoc) bits) //
+    val weightLoadedNum: UInt      = in UInt (log2Up(uoc + 1) bits) //
     val weightAddrBase:  UInt      = in UInt (log2Up(weightBuffer2DDepth) bits)
     val layerDone:       Bool      = in Bool ()
     val weightIn:        Bits      = in Bits (uic * width bits)

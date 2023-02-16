@@ -5,18 +5,22 @@ import spinal.lib._
 import scala.language.postfixOps
 import Chainsaw._
 
-case class LoopCtrl1D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, readLatencyURAM: Int, readLatencyBRAM: Int, PELatency: Int)
-    extends Component { // FIXME uc may be hardware to exe the 0D conv
+case class LoopCtrl1D(
+    uc:              Int = Parameter.Uc,
+    uoc:             Int = Parameter.Uoc,
+    readLatencyURAM: Int = 4,
+    readLatencyBRAM: Int = 2,
+    PELatency:       Int
+) extends Component {
   val io = new Bundle {
-    val loadConfig: Bool              = in Bool ()
-    val config:     ConfigParaPorts1D = in(ConfigParaPorts1D())
-    val shortCut:   Bool              = in Bool ()
-
-    val weightAddrBase:  UInt = out UInt (log2Up(Parameter.weightBuffer1DDepth) bits)
-    val weightLoadedNum: UInt = out(UInt(log2Up(uoc + 1) bits)) setAsReg () init 0
-    val readDone:        Bool = in Bool ()
-    val weightFilled:    Bool = in Bool ()
-    val layerDone:       Bool = out Bool () setAsReg () init False
+    val loadConfig:      Bool              = in Bool ()
+    val config:          ConfigParaPorts1D = in(ConfigParaPorts1D())
+    val shortCut:        Bool              = in Bool ()
+    val weightAddrBase:  UInt              = out UInt (log2Up(Parameter.weightBuffer1DDepth) bits)
+    val weightLoadedNum: UInt              = out(UInt(log2Up(uoc + 1) bits)) setAsReg () init 0
+    val readDone:        Bool              = in Bool ()
+    val weightFilled:    Bool              = in Bool ()
+    val layerDone:       Bool              = out Bool () setAsReg () init False
 
     val ifMapRdEn:    Bool = out Bool ()
     val ifMapAddr:    UInt = out UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
@@ -30,11 +34,15 @@ case class LoopCtrl1D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int
 
   }
 
-  val ow:    GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nohw, en = io.loadConfig)
-  val oh:    GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nohw, en = io.loadConfig)
-  val kt:    GeneralCounter = GeneralCounter(step = U(1), top = io.config.Kt, en = io.loadConfig)
-  val ti:    GeneralCounter = GeneralCounter(step = U(1), top = io.config.NcDUcCeil, en = io.loadConfig)
-  val tiNc:  GeneralCounter = GeneralCounter(step = U(uc), top = io.config.Nc, en = io.loadConfig)
+  val ow: GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nohw, en = io.loadConfig)
+  val oh: GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nohw, en = io.loadConfig)
+  val kt: GeneralCounter = GeneralCounter(step = U(1), top = io.config.Kt, en = io.loadConfig)
+  val ti: GeneralCounter = GeneralCounter(step = U(1), top = io.config.NcDUcCeil, en = io.loadConfig)
+  val tiNc: GeneralCounter = GeneralCounter(
+    step = U(uc),
+    top  = io.config.Nc,
+    en   = io.loadConfig
+  )
   val od:    GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nod, en = io.loadConfig)
   val to:    GeneralCounter = GeneralCounter(step = U(1), top = io.config.NocDUocCeil, en = io.loadConfig)
   val toNoc: GeneralCounter = GeneralCounter(step = U(uoc), top = io.config.Noc, en = io.loadConfig)
@@ -62,10 +70,14 @@ case class LoopCtrl1D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int
 
   // ----------------------weight addr base accumulation ----------------------------------------------------------------
   val ktWeightAddr: GeneralCounter = GeneralCounter(step = U(uoc), top = io.config.Kt * uoc, en = io.loadConfig)
-  val tiWeightAddr: GeneralCounter = GeneralCounter(step = io.config.Kt * uoc, top = io.config.NcDUcCeil * io.config.Kt * uoc, io.loadConfig)
+  val tiWeightAddr: GeneralCounter = GeneralCounter(
+    step = io.config.Kt * uoc,
+    top  = io.config.NcDUcCeil * io.config.Kt * uoc,
+    en   = io.loadConfig
+  )
   val toWeightAddr: GeneralCounter = GeneralCounter(
     step = io.config.NcDUcCeil * io.config.Kt * uoc,
-    top  = io.config.NocDUocCeil * io.config.NocDUocCeil * io.config.Kt * uoc,
+    top  = io.config.NcDUcCeil * io.config.NocDUocCeil * io.config.Kt * uoc,
     en   = io.loadConfig
   )
   when(io.readDone) {
@@ -90,18 +102,30 @@ case class LoopCtrl1D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int
   io.layerDone.setWhen(toWeightAddr.willOverFlow)
   io.layerDone.clearWhen(io.loadConfig)
   // ---------------------- if Map addr accumulation -------------------------------------------------------------------
-  val odIfMapAddr: GeneralCounter = GeneralCounter(
-    step = Mux(io.config.stride, U(2), U(1)),
-    top  = Mux(io.config.stride, io.config.Nod << 1, io.config.Nod),
-    en   = io.loadConfig
-  )
-  val owIfMapAddr: GeneralCounter = GeneralCounter(step = io.config.Nid, top = io.config.Nid * io.config.Nohw, en = io.loadConfig)
+
+  val owIfMapAddr: GeneralCounter =
+    GeneralCounter(
+      step = Mux(io.shortCut, io.config.Nid << 1, io.config.Nid),
+      top  = Mux(io.shortCut, io.config.Nid << 1, io.config.Nid) * io.config.Nohw,
+      en   = io.loadConfig
+    )
   val ohIfMapAddr: GeneralCounter = GeneralCounter(
-    step = io.config.Nohw * io.config.Nid,
-    top  = io.config.Nohw * io.config.Nid * io.config.Nohw,
+    step = io.config.Nihw * Mux(io.shortCut, io.config.Nid << 1, io.config.Nid),
+    top  = io.config.Nihw * Mux(io.shortCut, io.config.Nid << 1, io.config.Nid) * io.config.Nohw,
     en   = io.loadConfig
   )
-  val tiIfMapAddr: GeneralCounter = GeneralCounter(step = io.config.ifMapSize, top = io.config.NcDUcCeil * io.config.ifMapSize, en = io.loadConfig)
+
+  val tiIfMapAddr: GeneralCounter = GeneralCounter(
+    step = io.config.ifMapSize,
+    top  = io.config.NcDUcCeil * io.config.ifMapSize,
+    en   = io.loadConfig
+  )
+  val odIfMapAddr: GeneralCounter = GeneralCounter(
+    step = Mux(io.shortCut, U(2), Mux(io.config.stride, U(2), U(1))),
+    top  = Mux(io.shortCut, io.config.Nod << 1, Mux(io.config.stride, io.config.Nod << 1, io.config.Nod)),
+    en   = io.loadConfig
+  )
+
   when(io.weightFilled) {
     owIfMapAddr.inc()
   }
@@ -117,7 +141,8 @@ case class LoopCtrl1D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int
   val id: SInt = (Mux(io.config.stride, od.value << 1, od.value) + kt.value - io.config.padding).asSInt
   io.ifMapAddrVld := id >= 0 & id < io.config.Nid.asSInt
   io.ifMapRdEn    := io.weightFilled
-  io.ifMapAddr    := (odIfMapAddr.value + tiIfMapAddr.value + ohIfMapAddr.value + owIfMapAddr.value + kt.value - io.config.padding).resized
+  io.ifMapAddr    := (Function.CounterSum(odIfMapAddr, tiIfMapAddr, ohIfMapAddr, owIfMapAddr, kt) - Mux(io.shortCut, U(0), U(1))).resized
+
   // ---------------------- of Map addr accumulation -------------------------------------------------------------------
   val owOfMapAddr: GeneralCounter = GeneralCounter(step = io.config.Nod, top = io.config.Nohw * io.config.Nod, en = io.loadConfig)
   val ohOfMapAddr: GeneralCounter = GeneralCounter(
@@ -133,7 +158,7 @@ case class LoopCtrl1D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int
   when(owOfMapAddr.willOverFlow) {
     ohOfMapAddr.inc()
   }
-  when(ohOfMapAddr.willOverFlow & kt.willOverFlowIfInc & ti.willOverFlowIfInc) {
+  when(ohOfMapAddr.willOverFlow & (kt.willOverFlowIfInc & ti.willOverFlowIfInc).d(readLatencyURAM + readLatencyBRAM + PELatency)) {
     odOfMapAddr.inc()
   }
   when(odOfMapAddr.willOverFlow) {
@@ -144,4 +169,5 @@ case class LoopCtrl1D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int
   io.writeAcc     := io.weightFilled.d(readLatencyURAM + PELatency)
   io.doutEn       := ti.willOverFlowIfInc.d(readLatencyURAM + PELatency)
   io.accAddr      := (ow.value + oh.value * io.config.Nohw).d(readLatencyURAM + PELatency).resized
+
 }

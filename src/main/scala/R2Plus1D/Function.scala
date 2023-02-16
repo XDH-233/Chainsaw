@@ -28,4 +28,42 @@ object Function {
   def CounterSum(g: GeneralCounter*): UInt = {
     g.map(_.value).reduce(_ + _)
   }
+
+  implicit class SIntExtension(s: SInt) {
+    val dataWidth: Int = s.getWidth
+    def saturationResize(width: Int): SInt = {
+      val maxValue: Int = (1 << (width - 1)) - 1
+      val minValue: Int = -(1 << (width - 1))
+      if (dataWidth <= width) {
+        s.resize(dataWidth)
+      } else {
+        val t = SInt(width bits)
+        when(s < minValue) {
+          t := S(minValue)
+        } elsewhen (s > maxValue) {
+          t := S(maxValue)
+        } otherwise {
+          t := s.resize(width)
+        }
+        t
+      }
+    }
+
+    def relu(width: Int): SInt = {
+      if (dataWidth <= width) {
+        Mux(s.sign, S(0), s.resize(dataWidth))
+      } else {
+        val maxValue: Int = (1 << (width - 1)) - 1
+        val t = SInt(width bits)
+        when(s.sign) {
+          t := S(0)
+        } elsewhen (s > maxValue) {
+          t := S(maxValue)
+        } otherwise {
+          t := s.resize(width)
+        }
+        t
+      }
+    }
+  }
 }

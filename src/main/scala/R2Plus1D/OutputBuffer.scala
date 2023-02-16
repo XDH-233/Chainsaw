@@ -5,14 +5,14 @@ import scala.language.postfixOps
 import Chainsaw._
 import Chainsaw.memory._
 
-case class OutputBuffer2D(dataWidth: Int = 8, uc: Int = Parameter.Uc, readLatency: Int = 4, depth: Int = Parameter.outputBuffer2DDepth) extends Component {
+case class OutputBuffer(dataWidth: Int = 8, uc: Int = Parameter.Uc, readLatency: Int = 4, depth: Int = Parameter.outputBuffer2DDepth) extends Component {
   val io = new Bundle {
     val we:    Bool = in Bool ()
-    val wAddr: UInt = in UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
+    val wAddr: UInt = in UInt (log2Up(depth) bits)
     val wData: Bits = in Bits (dataWidth * uc bits)
 
     val rdEn:     Bool      = in Bool ()
-    val rAddr:    UInt      = in UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
+    val rAddr:    UInt      = in UInt (log2Up(depth) bits)
     val rAddrVld: Bool      = in Bool ()
     val rData:    Vec[Bits] = out Vec (Bits(dataWidth bits), uc)
   }

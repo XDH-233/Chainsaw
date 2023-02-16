@@ -11,7 +11,7 @@ class LoopCtrl1DTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   it should "work right " in {
     // ----------------------- model ------------------------------------------------------------------------------------
-    val config = model.ConvConfig(Uc = 2, Uoc = 6, Nc = 3, Noc = 8, Nid = 5, Nihw = 3, K = 3, stride = 2, padding = 1, convType = ConvType.D1)
+    val config = model.ConvConfig(Uic = 2, Uoc = 6, Nic = 3, Noc = 8, Nid = 5, Nihw = 3, K = 3, stride = 2, padding = 1, convType = ConvType.D1)
     config.display()
     val conv1D = model.Conv1D(config)
     val ifMap  = conv1D.randomIfMap
@@ -26,22 +26,15 @@ class LoopCtrl1DTest extends org.scalatest.flatspec.AnyFlatSpec {
         )
       )
       .compile {
-        val dut = LoopCtrl1D(uc = config.Uc, uoc = config.Uoc, readLatencyURAM = 4, readLatencyBRAM = 2, PELatency = 3)
+        val dut = LoopCtrl1D(uc = config.Uic, uoc = config.Uoc, readLatencyURAM = 4, readLatencyBRAM = 2, PELatency = 3)
         dut
       }
       .doSim { dut =>
         import dut._
         dut.clockDomain.forkStimulus(10)
         io.loadConfig #= false
+        io.config.assignConfig(config)
 
-        io.config.Nihw        #= config.Nihw
-        io.config.Kt          #= config.K
-        io.config.Nid         #= config.Nid
-        io.config.Nod         #= config.Nod
-        io.config.Nc          #= config.Nc
-        io.config.Noc         #= config.Noc
-        io.config.NcDUcCeil   #= config.NcDUcCeil
-        io.config.NocDUocCeil #= config.NocDUocCeil
         clockDomain.waitSampling()
         io.loadConfig #= true
         clockDomain.waitSampling()

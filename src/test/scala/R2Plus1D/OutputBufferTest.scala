@@ -4,7 +4,7 @@ import spinal.core.sim._
 import scala.language.postfixOps
 import Chainsaw.xilinx._
 
-class OutputBuffer2DTest extends org.scalatest.flatspec.AnyFlatSpec {
+class OutputBufferTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   it should "work right " in SimConfig.withFstWave
     .withConfig(
@@ -14,7 +14,7 @@ class OutputBuffer2DTest extends org.scalatest.flatspec.AnyFlatSpec {
       )
     )
     .compile {
-      val dut = OutputBuffer2D()
+      val dut = OutputBuffer()
 
       dut
     }

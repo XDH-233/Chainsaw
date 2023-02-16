@@ -19,18 +19,20 @@ case class ConfigParaPorts1D() extends Bundle {
   val ofMapSizeOwOh:          UInt = UInt(log2Up(Parameter.ofMapMaxOwOhSize1D + 1) bits)
   val ofMapSize:              UInt = UInt(log2Up(Parameter.ofMapSizeMax1D) bits)
 
-  def loadConfigInSim(c: model.ConvConfig): Unit = {
+  def assignConfig(c: model.ConvConfig): Unit = {
     Nihw          #= c.Nihw
+    Nohw          #= c.Nohw
     Kt            #= c.K
     Nid           #= c.Nid
     Nod           #= c.Nod
-    Nc            #= c.Nc
+    Nc            #= c.Nic
     Noc           #= c.Noc
-    NcDUcCeil     #= c.NcDUcCeil
+    NcDUcCeil     #= c.NicDUicCeil
     NocDUocCeil   #= c.NocDUocCeil
     stride        #= c.stride > 1
     padding       #= c.padding
     ifMapSize     #= c.ifMapSize
+    ofMapSize     #= c.ofMapSize
     ofMapSizeOwOh #= c.Nohw * c.Nohw
   }
 }

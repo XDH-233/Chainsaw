@@ -12,7 +12,7 @@ class LoopCtrl2DTest extends org.scalatest.flatspec.AnyFlatSpec {
   it should "work right" in {
     // -------------------Conv2D model----------------------------------------------------------------------------------
     val config =
-      model.ConvConfig(Uic = 4, Uc = 12, Nic = 9, Nc = 16, Nid = 2, Nihw = 5, K = 3, stride = 2, padding = 2, convType = ConvType.D2)
+      model.ConvConfig(Uic = 4, Uoc = 12, Nic = 9, Noc = 16, Nid = 2, Nihw = 5, K = 3, stride = 2, padding = 2, convType = ConvType.D2)
     val conv2D = model.Conv2D(config)
     config.display()
     val ifMap  = conv2D.randIfMap()
@@ -27,7 +27,7 @@ class LoopCtrl2DTest extends org.scalatest.flatspec.AnyFlatSpec {
         )
       )
       .compile {
-        val dut = LoopCtrl2D(uic = config.Uic, uc = config.Uc, PELatency = 4)
+        val dut = LoopCtrl2D(uic = config.Uic, uc = config.Uoc, PELatency = 4)
         dut
       }
       .doSim { dut =>

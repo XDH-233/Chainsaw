@@ -9,17 +9,16 @@ import scala.language.postfixOps
 
 case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLatencyURAM: Int = 4, PELatency: Int = 5, readLatencyBRAM: Int = 2)
     extends Component {
-  val width = 16
   val io = new Bundle {
 
-    val config: ConfigParaPorts2D = in(ConfigParaPorts2D(width))
+    val config: ConfigParaPorts2D = in(ConfigParaPorts2D())
 
-    val weightRdy, fMapRdy, loadConfig: Bool = in Bool ()
-    val readDone:                       Bool = in Bool ()
-    val filled:                         Bool = in Bool ()
-    val weightAddrBase:                 UInt = out UInt (log2Up(Parameter.weightBuffer2DDepth) bits)
-    val weightLoadedNum:                UInt = out UInt (log2Up(uc + 1) bits) setAsReg () init 0
-    val layerDone:                      Bool = out Bool () setAsReg () init False
+    val loadConfig:      Bool = in Bool ()
+    val readDone:        Bool = in Bool ()
+    val filled:          Bool = in Bool ()
+    val weightAddrBase:  UInt = out UInt (log2Up(Parameter.weightBuffer2DDepth) bits)
+    val weightLoadedNum: UInt = out UInt (log2Up(uc + 1) bits) setAsReg () init 0
+    val layerDone:       Bool = out Bool () setAsReg () init False
 
     val ifMapAddr:    SInt = out SInt (log2Up(Parameter.featureMapDepth) + 1 bits)
     val ifMapAddrVld: Bool = out Bool ()
@@ -29,8 +28,10 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
     val writeAcc:   Bool = out Bool ()
     val doutEn:     Bool = out Bool ()
 
-    val ofMapAddr:    UInt = out UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
-    val ofMapAddrVld: Bool = out Bool ()
+    val ofMapAddr:        UInt = out UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
+    val ofMapAddrVld:     Bool = out Bool ()
+    val ofMapWe:          Bool = out Bool ()
+    val ofMapBuffer2DRdy: Bool = out Bool () setAsReg () init False
   }
 
   import io.config._
@@ -213,6 +214,9 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
   }
   io.writeAcc := io.ifMapRdEn.d(readLatencyURAM + PELatency)
   io.doutEn   := ti.willOverFlowIfInc.d(readLatencyURAM + PELatency)
+  io.ofMapWe  := ti.willOverFlowIfInc.d(readLatencyURAM + PELatency + readLatencyBRAM)
+  io.ofMapBuffer2DRdy.setWhen((io.readDone & io.layerDone).d(readLatencyURAM + PELatency + readLatencyBRAM))
+  io.ofMapBuffer2DRdy.clearWhen(io.filled)
   // --------------------------------------------------------------------------------------------------------------------
   // clear counters
   when(io.layerDone & io.readDone) {
