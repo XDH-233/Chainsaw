@@ -12,10 +12,10 @@ case class Conv2D(config: ConvConfig) {
 
   def loopUnroll(ifMapTile: Array[Array[Int]], weightTile: Array[Array[Int]], printProcession: Boolean = true): Array[Array[Int]] = {
 
-    val ofMapTile = Array.fill(divideCeil(Nc, Uc) * ofMapSize)(Array.fill(Uc)(0))
-    for (to <- 0 until divideCeil(Nc, Uc)) {
+    val ofMapTile = Array.fill(NocDUocCeil * ofMapSize)(Array.fill(Uc)(0))
+    for (to <- 0 until NocDUocCeil) {
       for (th <- Range(0, Nohw, Toh); tw <- Range(0, Nohw, Tow)) {
-        for (ti <- 0 until divideCeil(Nic, Uic)) {
+        for (ti <- 0 until NicDUicCeil) {
           for (kr <- 0 until K; ks <- 0 until K) {
             val weightAddrHead: Int = weightAddr(to, ti, kr, ks)
             for (sth <- 0 until Toh) {
@@ -42,7 +42,7 @@ case class Conv2D(config: ConvConfig) {
                     println("-" * 100)
                     printf(f"od: $od%-4d stw: $stw%-4d sth: $sth%-4d ks: $ks%-4d kr: $kr%-4d ti: $ti%-4d tw: $tw%-4d th: $th%-4d  to: $to%-4d\n")
                     printf(f"ix: $ix%-4d iy: $iy%-4d ifAddr: $ifAddr%-5d weightAddrHead: $weightAddrHead%-5d\n")
-                    println(f"oh: ${th + sth}%-4d ow: ${tw + stw}%-4d ofMapAddr: $ofAddr%-5d\n")
+                    printf(f"oh: ${th + sth}%-4d ow: ${tw + stw}%-4d ofMapAddr: $ofAddr%-5d\n")
                   }
 
                 }

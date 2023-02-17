@@ -29,7 +29,7 @@ case class ConfigParaPorts2D() extends Bundle {
     Toh         #= config.Toh
     Nihw        #= config.Nihw
     kernelSize  #= config.kernelSize
-    ifMapSize   #= config.kernelSize
+    ifMapSize   #= config.ifMapSize
     NohwDTowCei #= config.NohwDTowCeil
     NohwDTohCei #= config.NohwDTohCeil
     NcDUcCeil   #= config.NocDUocCeil

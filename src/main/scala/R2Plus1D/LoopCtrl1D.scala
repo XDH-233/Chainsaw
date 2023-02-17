@@ -13,24 +13,28 @@ case class LoopCtrl1D(
     PELatency:       Int
 ) extends Component {
   val io = new Bundle {
-    val loadConfig:      Bool              = in Bool ()
-    val config:          ConfigParaPorts1D = in(ConfigParaPorts1D())
-    val shortCut:        Bool              = in Bool ()
-    val weightAddrBase:  UInt              = out UInt (log2Up(Parameter.weightBuffer1DDepth) bits)
-    val weightLoadedNum: UInt              = out(UInt(log2Up(uoc + 1) bits)) setAsReg () init 0
-    val readDone:        Bool              = in Bool ()
-    val weightFilled:    Bool              = in Bool ()
-    val layerDone:       Bool              = out Bool () setAsReg () init False
-
-    val ifMapRdEn:    Bool = out Bool ()
-    val ifMapAddr:    UInt = out UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
-    val ifMapAddrVld: Bool = out Bool ()
+    val loadConfig:       Bool              = in Bool ()
+    val config:           ConfigParaPorts1D = in(ConfigParaPorts1D())
+    val shortCut:         Bool              = in Bool ()
+    val toWriteDOne:      Bool              = in Bool ()
+    val ofMapBuffer2DRdy: Bool              = in Bool ()
+    val weightAddrBase:   UInt              = out UInt (log2Up(Parameter.weightBuffer1DDepth) bits)
+    val weightLoadedNum:  UInt              = out(UInt(log2Up(uoc + 1) bits)) setAsReg () init 0
+    val readDone:         Bool              = in Bool ()
+    val weightFilled:     Bool              = in Bool ()
+    val layerReadDone:    Bool              = out Bool () setAsReg () init False
+    val conv1DDone:       Bool              = out Bool () setAsReg () init (False)
+    val ifMapRdEn:        Bool              = out Bool ()
+    val ifMapAddr:        UInt              = out UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
+    val ifMapAddrVld:     Bool              = out Bool ()
 
     val ofMapAddr:    UInt = out UInt (log2Up(Parameter.featureMapDepth) bits)
     val ofMapWriteEn: Bool = out Bool ()
     val writeAcc:     Bool = out Bool ()
     val doutEn:       Bool = out Bool ()
     val accAddr:      UInt = out UInt (log2Up(Parameter.ofMapMaxOwOhSize1D) bits)
+
+    val willOverflowIfInc = out Bool ()
 
   }
 
@@ -47,9 +51,17 @@ case class LoopCtrl1D(
   val to:    GeneralCounter = GeneralCounter(step = U(1), top = io.config.NocDUocCeil, en = io.loadConfig)
   val toNoc: GeneralCounter = GeneralCounter(step = U(uoc), top = io.config.Noc, en = io.loadConfig)
 
-  when(io.weightFilled) {
+  val fMapFilled: Bool = RegInit(False)
+
+  when(io.toWriteDOne) {
+    fMapFilled.set()
+  } elsewhen (io.willOverflowIfInc) {
+    fMapFilled.clear()
+  }
+  when(io.toWriteDOne | (fMapFilled & ~io.willOverflowIfInc) | io.weightFilled) {
     ow.inc()
   }
+
   when(ow.willOverFlow) {
     oh.inc()
   }
@@ -99,8 +111,8 @@ case class LoopCtrl1D(
   } elsewhen (io.config.Noc >= U(uoc) & toNoc.value + (uoc * 2) >= io.config.Noc & ti.willOverFlowIfInc & od.willOverFlowIfInc & ktWeightAddr.willOverFlow) {
     io.weightLoadedNum := (io.config.Noc % U(uoc)).resized
   }
-  io.layerDone.setWhen(toWeightAddr.willOverFlow)
-  io.layerDone.clearWhen(io.loadConfig)
+  io.layerReadDone.setWhen(toWeightAddr.willOverFlow)
+  io.layerReadDone.clearWhen(io.loadConfig)
   // ---------------------- if Map addr accumulation -------------------------------------------------------------------
 
   val owIfMapAddr: GeneralCounter =
@@ -125,8 +137,7 @@ case class LoopCtrl1D(
     top  = Mux(io.shortCut, io.config.Nod << 1, Mux(io.config.stride, io.config.Nod << 1, io.config.Nod)),
     en   = io.loadConfig
   )
-
-  when(io.weightFilled) {
+  when(io.toWriteDOne | (fMapFilled & ~io.willOverflowIfInc) | io.weightFilled) {
     owIfMapAddr.inc()
   }
   when(owIfMapAddr.willOverFlow) {
@@ -140,7 +151,7 @@ case class LoopCtrl1D(
   }
   val id: SInt = (Mux(io.config.stride, od.value << 1, od.value) + kt.value - io.config.padding).asSInt
   io.ifMapAddrVld := id >= 0 & id < io.config.Nid.asSInt
-  io.ifMapRdEn    := io.weightFilled
+  io.ifMapRdEn    := Mux(io.shortCut, io.weightFilled, io.weightFilled & fMapFilled)
   io.ifMapAddr    := (Function.CounterSum(odIfMapAddr, tiIfMapAddr, ohIfMapAddr, owIfMapAddr, kt) - Mux(io.shortCut, U(0), U(1))).resized
 
   // ---------------------- of Map addr accumulation -------------------------------------------------------------------
@@ -170,4 +181,7 @@ case class LoopCtrl1D(
   io.doutEn       := ti.willOverFlowIfInc.d(readLatencyURAM + PELatency)
   io.accAddr      := (ow.value + oh.value * io.config.Nohw).d(readLatencyURAM + PELatency).resized
 
+  io.conv1DDone.setWhen(io.readDone & io.layerReadDone)
+  io.conv1DDone.clearWhen(io.loadConfig)
+  io.willOverflowIfInc := ow.willOverFlowIfInc & oh.willOverFlowIfInc & kt.willOverFlowIfInc
 }

@@ -26,7 +26,7 @@ class ElementWiseAdditionTest extends AnyFlatSpec {
       io.ofMapWe1D #= false
       io.ofMapAddr #= 0
       io.accRAMDout.foreach(_ #= 0)
-      io.buffer0DRData #= 0
+      io.buffer0DRData.foreach(_ #= 0)
       clockDomain.waitSampling()
 
       (0 until 100).foreach { i =>

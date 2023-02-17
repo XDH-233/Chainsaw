@@ -33,8 +33,8 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
     val weight1DWriteData: Bits = in Bits (dataWidth * uc bits)
   }
 
-  val relu: Bool = ~io.addition
-
+  val relu:             Bool             = ~io.addition
+  val shortCutReg:      Bool             = RegInit(False)
   val PE2D:             PE               = PE(uic = uic, uoc = uc, width = dataWidth)
   val weightBuffer2D:   WeightBuffer     = WeightBuffer(dataWidth = dataWidth, depth = weightBuffer2DDepth, uic = uic)
   val featureMapBuffer: FeatureMapBuffer = FeatureMapBuffer(width = dataWidth, depth = featureMapDepth, uic = uic)
@@ -45,13 +45,14 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
 
   val weightBuffer1D: WeightBuffer = WeightBuffer(dataWidth = dataWidth, uic = uc, depth = Parameter.weightBuffer1DDepth)
   val PE1D:           PE           = PE(uic = uc, uoc = uoc, width = dataWidth)
-  val accRAM1D:       AccRAM       = AccRAM(uoc = uoc, depth = Parameter.ofMapMaxOwOhSize1D, dataOutWidth = dataWidth)
+  val accRAM1D:       AccRAM       = AccRAM(uoc = uoc, depth = Parameter.ofMapMaxOwOhSize1D, dataOutWidth = dataWidth, dataWidth = 28)
   val loopCtrl1D: LoopCtrl1D =
     LoopCtrl1D(uc = uc, uoc = uoc, readLatencyURAM = weightBuffer1D.readLatency, readLatencyBRAM = accRAM1D.readLatency, PELatency = PE1D.PELatency)
-  val pingPongRegs1D: PingPongRegs1D = PingPongRegs1D(dataWidth = dataWidth, uc = uc, uoc = uoc)
-  val outputBuffer0D: OutputBuffer   = OutputBuffer(dataWidth = dataWidth, uc = uoc, readLatency = 4, depth = featureMapDepth)
+  val pingPongRegs1D:      PingPongRegs1D      = PingPongRegs1D(dataWidth = dataWidth, uc = uc, uoc = uoc)
+  val outputBuffer0D:      OutputBuffer        = OutputBuffer(dataWidth = dataWidth, uc = uoc, readLatency = 4, depth = featureMapDepth)
+  val elementWiseAddition: ElementWiseAddition = ElementWiseAddition(dataWidth = dataWidth, uoc = uoc, depth = Parameter.featureMapDepth)
 
-  when(io.shortCut & ~loopCtrl2D.io.ofMapBuffer2DRdy) {
+  when(shortCutReg & ~loopCtrl2D.io.ofMapBuffer2DRdy) {
     loopCtrl1D.io.config.assignAllByName(io.config0D)
   } otherwise {
     loopCtrl1D.io.config.assignAllByName(io.config1D)
@@ -59,48 +60,47 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
 
   val loadConfig2D: Bool = Bool() setAsReg () init False
   val loadConfig1D: Bool = Bool() setAsReg () init False
-
+  loopCtrl1D.io.toWriteDOne           := loopCtrl2D.io.toWriteDone
+  loopCtrl1D.io.ofMapBuffer2DRdy      := loopCtrl2D.io.ofMapBuffer2DRdy
+  pingPongRegs1D.io.toWriteDone       := loopCtrl2D.io.toWriteDone
+  pingPongRegs1D.io.shortCut          := shortCutReg
+  pingPongRegs1D.io.willOverFlowIfInc := loopCtrl1D.io.willOverflowIfInc
   val FSM = new StateMachine {
     val idle     = new State with EntryPoint
-    val conv2D   = new State
+    val conv2D1D = new State
     val conv2D0D = new State
-    val conv1D   = new State
 
     idle.whenIsActive {
       when(io.newConv & io.weight2DRdy & io.fMapDDRLoadDone) {
         loadConfig2D.set()
+        loadConfig1D.set()
         when(io.shortCut & io.weight1DRdy) {
-          loadConfig1D.set()
+          shortCutReg.set()
           goto(conv2D0D)
         } otherwise {
-          goto(conv2D)
+          goto(conv2D1D)
         }
-      }
-    }
-
-    conv2D.whenIsActive {
-      loadConfig2D.clear()
-      when(loopCtrl2D.io.ofMapBuffer2DRdy) {
-        loadConfig1D.set()
-        goto(conv1D)
       }
     }
 
     conv2D0D.whenIsActive {
       loadConfig2D.clear()
       loadConfig1D.clear()
-      when(loopCtrl2D.io.ofMapBuffer2DRdy) {
+      when(loopCtrl1D.io.conv1DDone) {
         loadConfig1D.set()
-        goto(conv1D)
+        shortCutReg.clear()
+        goto(conv2D1D)
       }
     }
 
-    conv1D.whenIsActive {
-      loadConfig1D.set()
-      when(True) {
+    conv2D1D.whenIsActive {
+      loadConfig2D.clear()
+      loadConfig1D.clear()
+      when(loopCtrl1D.io.conv1DDone) {
         goto(idle)
       }
     }
+
   }
 
   // i0
@@ -109,7 +109,8 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
   pingPongRegs1D.io.weightRdy       := io.weight1DRdy
   loopCtrl1D.io.loadConfig          := loadConfig1D
   loopCtrl2D.io.loadConfig          := loadConfig2D
-  loopCtrl1D.io.shortCut            := io.shortCut
+  loopCtrl1D.io.shortCut            := shortCutReg
+  loopCtrl2D.io.config.assignAllByName(io.config2D)
 
   // weight write
   weightBuffer2D.io.writeEn   := io.weight2DWriteEn
@@ -142,7 +143,7 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
   featureMapBuffer.io.rAddr2DPEVld := loopCtrl2D.io.ifMapAddrVld
 
   // feature map read 1D
-  featureMapBuffer.io.readEn1DPE   := io.shortCut & loopCtrl1D.io.ifMapRdEn
+  featureMapBuffer.io.readEn1DPE   := loopCtrl1D.io.ifMapRdEn
   featureMapBuffer.io.rAddr1DPE    := loopCtrl1D.io.ifMapAddr.resized
   featureMapBuffer.io.rAddr1DPEVld := loopCtrl1D.io.ifMapAddrVld
 
@@ -161,7 +162,7 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
   outputBuffer2D.io.wAddr := loopCtrl2D.io.ofMapAddr
   outputBuffer2D.io.wData := accRAM2D.io.doutReLU
 
-  outputBuffer2D.io.rdEn     := (~io.shortCut) & loopCtrl1D.io.ifMapRdEn
+  outputBuffer2D.io.rdEn     := loopCtrl1D.io.ifMapRdEn
   outputBuffer2D.io.rAddr    := loopCtrl1D.io.ifMapAddr
   outputBuffer2D.io.rAddrVld := loopCtrl1D.io.ifMapAddrVld
 
@@ -185,7 +186,7 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
   accRAM1D.io.wData.zip(PE1D.io.partialSum).foreach { case (w, p) => w := p.resized }
 
   // PE 1D <- output buffer 2D or feature map
-  when(io.shortCut) {
+  when(shortCutReg) {
     (uic until uc).foreach(u => PE1D.io.ifMap(u).clearAll())
     featureMapBuffer.io.rData1DPE.zipWithIndex.foreach { case (f, i) => PE1D.io.ifMap(i) := f.asSInt }
   } otherwise {
@@ -197,11 +198,12 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
   // ping pong regs 1D and loop ctrl 1D
   loopCtrl1D.io.weightFilled       := pingPongRegs1D.io.weightFilled
   pingPongRegs1D.io.loadConfig     := loadConfig1D
-  pingPongRegs1D.io.layerDone      := loopCtrl1D.io.layerDone
+  pingPongRegs1D.io.layerDone      := loopCtrl1D.io.layerReadDone
   pingPongRegs1D.io.ofMapSize2D    := io.config1D.ofMapSizeOwOh
   pingPongRegs1D.io.weightLoadNum  := loopCtrl1D.io.weightLoadedNum
   pingPongRegs1D.io.weightAddrBase := loopCtrl1D.io.weightAddrBase
-  pingPongRegs1D.io.ifMapRdy       := Mux(io.shortCut, True, loopCtrl2D.io.ofMapBuffer2DRdy)
+  pingPongRegs1D.io.ofMap2DRdy     := loopCtrl2D.io.ofMapBuffer2DRdy
+  pingPongRegs1D.io.fMapDDRRdy     := io.fMapDDRLoadDone
   loopCtrl1D.io.readDone           := pingPongRegs1D.io.readDone
 
   // outputBuffer0D
@@ -209,8 +211,13 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
   outputBuffer0D.io.wAddr := loopCtrl1D.io.ofMapAddr
   outputBuffer0D.io.wData := accRAM1D.io.doutReLU
 
-  outputBuffer0D.io.rdEn.clear()
-  outputBuffer0D.io.rAddr.clearAll()
+  outputBuffer0D.io.rdEn  := elementWiseAddition.io.buffer0DRdEn
+  outputBuffer0D.io.rAddr := elementWiseAddition.io.buffer0DRAddr
   outputBuffer0D.io.rAddrVld.clear()
 
+  // element-wise addition
+  elementWiseAddition.io.ofMapWe1D := loopCtrl1D.io.ofMapWriteEn
+  elementWiseAddition.io.ofMapAddr := loopCtrl1D.io.ofMapAddr
+  Function.vecZip(elementWiseAddition.io.accRAMDout, accRAM1D.io.douts)
+  elementWiseAddition.io.buffer0DRData := outputBuffer0D.io.rData
 }

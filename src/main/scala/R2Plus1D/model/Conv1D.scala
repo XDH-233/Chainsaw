@@ -28,7 +28,7 @@ case class Conv1D(config: ConvConfig) {
     ret
   }
 
-  def loopUnroll(ifMapTile: Array[Array[Int]], weightTile: Array[Array[Int]]): Array[Array[Int]] = {
+  def loopUnroll(ifMapTile: Array[Array[Int]], weightTile: Array[Array[Int]], printProcession: Boolean = true): Array[Array[Int]] = {
 
     val ofMapTile = Array.fill(divideCeil(Noc, Uoc) * ofMapSize)(Array.fill(Uoc)(0))
 
@@ -45,9 +45,11 @@ case class Conv1D(config: ConvConfig) {
               val psum      = PEArray(ifMap, weight)
               val ofMapAddr = to * ofMapSize + oh * Nohw * Nod + ow * Nod + od
               psum.zipWithIndex.foreach { case (p, i) => ofMapTile(ofMapAddr)(i) += p }
-              println("-" * 100)
-              printf(f"ow: $ow%-4d oh: $oh%-4d k: $k%-4d  ti: $ti%-4d  od: $od%-4d to: $to%-4d\n")
-              printf(f"id: $id%-4d ifAddr: $ifMapAddr%-4d weightAddrHead: $weightAddrHead%-4d ofMapAddr: $ofMapAddr%-4d\n")
+              if (printProcession) {
+                println("-" * 100)
+                printf(f"ow: $ow%-4d oh: $oh%-4d k: $k%-4d  ti: $ti%-4d  od: $od%-4d to: $to%-4d\n")
+                printf(f"id: $id%-4d ifAddr: $ifMapAddr%-4d weightAddrHead: $weightAddrHead%-4d ofMapAddr: $ofMapAddr%-4d\n")
+              }
             }
           }
         }
