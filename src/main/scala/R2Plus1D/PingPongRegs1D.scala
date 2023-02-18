@@ -27,6 +27,10 @@ case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int =
   }
   io.readDone.clear()
 
+  val configLoaded: Bool = Bool() setAsReg () init (False)
+  when(io.loadConfig) {
+    configLoaded.set()
+  }
   val ping, pong:  Vec[Bits]      = Vec(Reg(Bits(dataWidth * uc bits)), uoc)
   val fillPing:    Bool           = RegInit(False)
   val load:        Bool           = io.readEn.d(readLatency)
@@ -41,7 +45,7 @@ case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int =
     val filled   = new State
 
     idle.whenIsActive {
-      when(io.weightRdy & ~io.layerDone) {
+      when(io.weightRdy & ~io.layerDone & configLoaded) {
         io.readEn.set()
         goto(fillOne)
       }
@@ -82,6 +86,16 @@ case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int =
         io.readDone.set()
       }
 
+      when(readCounter.value + 1 === io.weightLoadNum) {
+        io.readEn.clear()
+      } elsewhen (readCounter.willOverFlow) {
+        io.readEn.set()
+      }
+
+      when(readCounter.value + 1 === readLatency) {
+        fillPing := ~fillPing
+      }
+
       when(io.ofMap2DRdy) {
         readCounter.clear()
         io.readEn.set()
@@ -109,6 +123,7 @@ case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int =
         load.clear()
         io.readEn.clear()
         io.weightFilled.clear()
+        configLoaded.clear()
         goto(idle)
       }
     }

@@ -15,8 +15,6 @@ case class ConfigParaPorts2D() extends Bundle {
   val kernelSize:             UInt = UInt(6 bits)
   val ifMapSize:              UInt = UInt(log2Up(ifMapSizeMax2D) bits)
   val ofMapSize:              UInt = UInt(log2Up(Parameter.ofMapSizeMax2D + 1) bits)
-  val NohwDTohCei:            UInt = UInt(5 bits)
-  val NohwDTowCei:            UInt = UInt(5 bits)
   val stride:                 Bool = Bool() // 0 -> 1, 1 -> 2
   val padding:                UInt = UInt(3 bits)
 
@@ -30,8 +28,6 @@ case class ConfigParaPorts2D() extends Bundle {
     Nihw        #= config.Nihw
     kernelSize  #= config.kernelSize
     ifMapSize   #= config.ifMapSize
-    NohwDTowCei #= config.NohwDTowCeil
-    NohwDTohCei #= config.NohwDTohCeil
     NcDUcCeil   #= config.NocDUocCeil
     NicDUicCeil #= config.NicDUicCeil
     stride      #= config.stride > 1

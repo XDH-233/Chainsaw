@@ -3,7 +3,8 @@ import spinal.core._
 
 import scala.language.postfixOps
 
-case class SDPURAM(width: Int, depth: Int, readLatency: Int = 4) extends BlackBox {
+case class SDPURAM(width: Int, depth: Int, pipeRegsCount: Int = 4) extends BlackBox {
+  val readLatency: Int = pipeRegsCount + 1
   val io = new Bundle {
     val clk:    Bool = in Bool ()
     val reset:  Bool = in Bool ()
@@ -15,7 +16,7 @@ case class SDPURAM(width: Int, depth: Int, readLatency: Int = 4) extends BlackBo
     val doutb:  Bits = out Bits (width bits)
   }
   noIoPrefix()
-  addGenerics(("DEPTH", depth), ("DWIDTH", width), ("NBPIPE", readLatency - 1))
+  addGenerics(("DEPTH", depth), ("DWIDTH", width), ("NBPIPE", pipeRegsCount - 1))
   mapClockDomain(clock = io.clk, reset = io.reset)
 
   def write(addr: UInt, data: Bits, en: Bool): Unit = {

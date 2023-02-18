@@ -4,7 +4,7 @@ import spinal.core._
 import scala.language.postfixOps
 import Chainsaw.memory.ReadUnderWriteMode._
 
-case class SPURAM(width: Int, depth: Int, readLatency: Int, singlePortMode: ReadUnderWriteMode.Value) extends BlackBox {
+case class SPURAM(width: Int, depth: Int, pipeRegsCount: Int, singlePortMode: ReadUnderWriteMode.Value) extends BlackBox {
   val io = new Bundle {
     val clk:    Bool = in Bool () // Clock
     val reset:  Bool = in Bool ()
@@ -17,7 +17,7 @@ case class SPURAM(width: Int, depth: Int, readLatency: Int, singlePortMode: Read
 
   noIoPrefix()
 
-  addGenerics(("DWIDTH", width), ("DEPTH", depth), ("NBPIPE", readLatency - 1))
+  addGenerics(("DWIDTH", width), ("DEPTH", depth), ("NBPIPE", pipeRegsCount - 1))
   mapClockDomain(clock = io.clk, reset = io.reset)
 
   def read(en: Bool, addr: UInt, data: Bits) = {

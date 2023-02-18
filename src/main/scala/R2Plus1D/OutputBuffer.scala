@@ -5,7 +5,7 @@ import scala.language.postfixOps
 import Chainsaw._
 import Chainsaw.memory._
 
-case class OutputBuffer(dataWidth: Int = 8, uc: Int = Parameter.Uc, readLatency: Int = 4, depth: Int = Parameter.outputBuffer2DDepth) extends Component {
+case class OutputBuffer(dataWidth: Int = 8, uc: Int = Parameter.Uc, pipeRegsCount: Int = 4, depth: Int = Parameter.outputBuffer2DDepth) extends Component {
   val io = new Bundle {
     val we:    Bool = in Bool ()
     val wAddr: UInt = in UInt (log2Up(depth) bits)
@@ -25,6 +25,6 @@ case class OutputBuffer(dataWidth: Int = 8, uc: Int = Parameter.Uc, readLatency:
   ram.io.dina   := io.wData
   val rData: Bits = Bits(dataWidth * uc bits)
 
-  rData := Mux(io.rAddrVld.d(readLatency), ram.io.doutb, B(0))
+  rData := Mux(io.rAddrVld.d(pipeRegsCount + 1), ram.io.doutb, B(0))
   Function.vecZip(io.rData, rData.subdivideIn(dataWidth bits))
 }

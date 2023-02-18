@@ -14,7 +14,7 @@ class OutputBufferTest extends org.scalatest.flatspec.AnyFlatSpec {
       )
     )
     .compile {
-      val dut = OutputBuffer()
+      val dut = OutputBuffer(uc = 2)
 
       dut
     }
@@ -28,5 +28,18 @@ class OutputBufferTest extends org.scalatest.flatspec.AnyFlatSpec {
       io.rdEn     #= false
       io.rAddr    #= 0
       clockDomain.waitSampling()
+      (0 until 10).foreach { i =>
+        io.wAddr #= i
+        io.wData.randomize()
+        io.we #= true
+        clockDomain.waitSampling()
+      }
+      io.we       #= false
+      io.rdEn     #= true
+      io.rAddrVld #= true
+      (0 until 10).foreach { i =>
+        io.rAddr #= i
+        clockDomain.waitSampling()
+      }
     }
 }

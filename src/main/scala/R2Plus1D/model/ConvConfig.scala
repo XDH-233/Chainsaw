@@ -66,8 +66,3 @@ case class ConvConfig(
     printf(f"K: $K%-4d stride: $stride%-4d padding: $padding%-4d\n")
   }
 }
-
-object fuck extends App {
-
-  println(sqrt(36.toDouble / 4.toDouble).floor.toInt)
-}

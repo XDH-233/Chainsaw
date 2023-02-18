@@ -5,7 +5,7 @@ import Chainsaw.xilinx._
 import spinal.core._
 import scala.language.postfixOps
 
-case class TDPURAM(width: Int, depth: Int, readLatency: Int = 4) extends BlackBox {
+case class TDPURAM(width: Int, depth: Int, pipeRegCount: Int = 4) extends BlackBox {
   val io = new Bundle {
     val clk:   Bool = in Bool () // Clock
     val reset: Bool = in Bool () // no use, just for simulation
@@ -61,7 +61,7 @@ case class TDPURAM(width: Int, depth: Int, readLatency: Int = 4) extends BlackBo
     }
   }
 
-  def portRead(en: Bool, addr: UInt, data: Bits, name: String) = {
+  def portRead(en: Bool, addr: UInt, data: Bits, name: String): Unit = {
     name match {
       case "a" => {
         io.mem_ena := en
@@ -80,7 +80,7 @@ case class TDPURAM(width: Int, depth: Int, readLatency: Int = 4) extends BlackBo
     }
   }
 
-  addGenerics(("DEPTH", depth), ("DWIDTH", width), ("NBPIPE", readLatency - 1))
+  addGenerics(("DEPTH", depth), ("DWIDTH", width), ("NBPIPE", pipeRegCount - 1))
 
   setInlineVerilog("""
   

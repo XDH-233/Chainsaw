@@ -34,9 +34,11 @@ case class LoopCtrl1D(
     val doutEn:       Bool = out Bool ()
     val accAddr:      UInt = out UInt (log2Up(Parameter.ofMapMaxOwOhSize1D) bits)
 
-    val willOverflowIfInc = out Bool ()
+    val willOverflowIfInc: Bool = out Bool ()
 
   }
+
+  val ofMapLatency: Int = readLatencyURAM + PELatency + readLatencyBRAM
 
   val ow: GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nohw, en = io.loadConfig)
   val oh: GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nohw, en = io.loadConfig)
@@ -58,7 +60,9 @@ case class LoopCtrl1D(
   } elsewhen (io.willOverflowIfInc) {
     fMapFilled.clear()
   }
-  when(io.toWriteDOne | (fMapFilled & ~io.willOverflowIfInc) | io.weightFilled) {
+  val owInc: Bool = (fMapFilled & ~io.willOverflowIfInc) | io.weightFilled
+
+  when(owInc) {
     ow.inc()
   }
 
@@ -137,7 +141,8 @@ case class LoopCtrl1D(
     top  = Mux(io.shortCut, io.config.Nod << 1, Mux(io.config.stride, io.config.Nod << 1, io.config.Nod)),
     en   = io.loadConfig
   )
-  when(io.toWriteDOne | (fMapFilled & ~io.willOverflowIfInc) | io.weightFilled) {
+
+  when(owInc) {
     owIfMapAddr.inc()
   }
   when(owIfMapAddr.willOverFlow) {
@@ -151,7 +156,7 @@ case class LoopCtrl1D(
   }
   val id: SInt = (Mux(io.config.stride, od.value << 1, od.value) + kt.value - io.config.padding).asSInt
   io.ifMapAddrVld := id >= 0 & id < io.config.Nid.asSInt
-  io.ifMapRdEn    := Mux(io.shortCut, io.weightFilled, io.weightFilled & fMapFilled)
+  io.ifMapRdEn    := Mux(io.shortCut, io.weightFilled, io.weightFilled | fMapFilled)
   io.ifMapAddr    := (Function.CounterSum(odIfMapAddr, tiIfMapAddr, ohIfMapAddr, owIfMapAddr, kt) - Mux(io.shortCut, U(0), U(1))).resized
 
   // ---------------------- of Map addr accumulation -------------------------------------------------------------------
@@ -163,19 +168,19 @@ case class LoopCtrl1D(
   )
   val odOfMapAddr: GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nod, en = io.loadConfig)
   val toOfMapAddr: GeneralCounter = GeneralCounter(step = io.config.ofMapSize, top = io.config.NocDUocCeil * io.config.ofMapSize, en = io.loadConfig)
-  when(io.weightFilled.d(readLatencyBRAM + readLatencyURAM + PELatency)) {
+  when(owInc.d(ofMapLatency)) {
     owOfMapAddr.inc()
   }
   when(owOfMapAddr.willOverFlow) {
     ohOfMapAddr.inc()
   }
-  when(ohOfMapAddr.willOverFlow & (kt.willOverFlowIfInc & ti.willOverFlowIfInc).d(readLatencyURAM + readLatencyBRAM + PELatency)) {
+  when(ohOfMapAddr.willOverFlow & (kt.willOverFlowIfInc & ti.willOverFlowIfInc).d(ofMapLatency)) {
     odOfMapAddr.inc()
   }
   when(odOfMapAddr.willOverFlow) {
     toOfMapAddr.inc()
   }
-  io.ofMapWriteEn := ti.willOverFlowIfInc.d(readLatencyURAM + PELatency + readLatencyBRAM)
+  io.ofMapWriteEn := ti.willOverFlowIfInc.d(ofMapLatency)
   io.ofMapAddr    := Function.CounterSum(owOfMapAddr, ohOfMapAddr, odOfMapAddr, toOfMapAddr).resized
   io.writeAcc     := io.weightFilled.d(readLatencyURAM + PELatency)
   io.doutEn       := ti.willOverFlowIfInc.d(readLatencyURAM + PELatency)

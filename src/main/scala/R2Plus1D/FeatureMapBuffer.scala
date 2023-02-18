@@ -6,7 +6,8 @@ import spinal.lib._
 
 import scala.language.postfixOps
 
-case class FeatureMapBuffer(width: Int = 512, depth: Int = 50176, uic: Int = 36, readLatency: Int = 4) extends Component {
+case class FeatureMapBuffer(width: Int = 512, depth: Int = 50176, uic: Int = 36, pipeRegCount: Int = 4) extends Component {
+  val readLatecy: Int = pipeRegCount + 1
   val io = new Bundle {
     val switch: Bool = in Bool ()
     val we:     Bool = in Bool ()
@@ -27,7 +28,7 @@ case class FeatureMapBuffer(width: Int = 512, depth: Int = 50176, uic: Int = 36,
   val readData2DPERAM: Bits = Bits(width * uic bits)
   val readData1DPERAM: Bits = Bits((width * uic bits))
 
-  val urams: Seq[TDPURAM] = Seq.fill(2)(TDPURAM(width = width * uic, depth = depth))
+  val urams: Seq[TDPURAM] = Seq.fill(2)(TDPURAM(width = width * uic, depth = depth, pipeRegCount = pipeRegCount))
 
   val state: Bool = RegInit(False) // 0 -> read urams0, write urams1
   state.toggleWhen(io.switch)
@@ -46,6 +47,6 @@ case class FeatureMapBuffer(width: Int = 512, depth: Int = 50176, uic: Int = 36,
     urams.head.portRead(io.readEn1DPE, io.rAddr1DPE, readData1DPERAM, "b")
   }
 
-  io.rData2DPE.zip(readData2DPERAM.subdivideIn(width bits)).foreach { case (i, r) => i := Mux(io.rAddr2DPEVld.d(readLatency), r, B(0)) }
-  io.rData1DPE.zip(readData1DPERAM.subdivideIn(width bits)).foreach({ case (o, r) => o := Mux(io.rAddr1DPEVld.d(readLatency), r, B(0)) })
+  io.rData2DPE.zip(readData2DPERAM.subdivideIn(width bits)).foreach { case (i, r) => i := Mux(io.rAddr2DPEVld.d(pipeRegCount), r, B(0)) }
+  io.rData1DPE.zip(readData1DPERAM.subdivideIn(width bits)).foreach({ case (o, r) => o := Mux(io.rAddr1DPEVld.d(pipeRegCount), r, B(0)) })
 }

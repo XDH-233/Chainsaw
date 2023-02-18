@@ -14,7 +14,7 @@ class SimpleDualPortRAMTest extends org.scalatest.flatspec.AnyFlatSpec {
       )
     )
     .compile {
-      val dut = SimpleDualPortRAM(width = 8, depth = 16, readLatency = 2)
+      val dut = SimpleDualPortRAM(width = 8, depth = 16, pipeRegCount = 2)
       dut
     }
     .doSim { dut =>

@@ -9,9 +9,9 @@ import scala.util.Random.nextInt
 class FeatureMapBufferTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   "feature map buffer" should "consume right resource" in MyVivadoAction(
-    FeatureMapBuffer(width = 36 * 8, depth = 25 * 4 * 1024),
+    FeatureMapBuffer(width = 8, uic = 36, depth = 25 * 4 * 1024),
     "feature_map_buffer",
-    IMPL
+    SYNTH
   )
 
   it should "sim well" in SimConfig.withFstWave
@@ -22,7 +22,7 @@ class FeatureMapBufferTest extends org.scalatest.flatspec.AnyFlatSpec {
       )
     )
     .compile {
-      val dut = FeatureMapBuffer(width = 8)
+      val dut = FeatureMapBuffer(width = 8, uic = 2, pipeRegCount = 4)
       dut
     }
     .doSim { dut =>
