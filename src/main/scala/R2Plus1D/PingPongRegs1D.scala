@@ -5,7 +5,7 @@ import spinal.lib.fsm._
 import scala.language.postfixOps
 import Chainsaw._
 
-case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, readLatency: Int = 4) extends Component {
+case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, readLatency: Int = 5) extends Component {
   val io = new Bundle {
     val weightRdy:         Bool      = in Bool ()
     val loadConfig:        Bool      = in Bool ()

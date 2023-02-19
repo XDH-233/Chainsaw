@@ -33,14 +33,13 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends C
   val featureMapBuffer: FeatureMapBuffer = FeatureMapBuffer(width = dataWidth, depth = featureMapDepth, uic = uic)
   val pingPongRegs2D:   PingPongRegs2D   = PingPongRegs2D(width = dataWidth, uoc = uc, uic = uic)
   val accRAM2D:         AccRAM           = AccRAM(uoc = uc, depth = uc)
-  val loopCtrl2D:       LoopCtrl2D       = LoopCtrl2D(uic = uic, uc = uc, PELatency = PE2D.PELatency, readLatencyBRAM = accRAM2D.pipeRegCount)
+  val loopCtrl2D:       LoopCtrl2D       = LoopCtrl2D(uic = uic, uc = uc, PELatency = PE2D.PELatency, accLatency = accRAM2D.pipeRegCount)
   val outputBuffer2D:   OutputBuffer     = OutputBuffer(dataWidth = dataWidth, uc = uc, depth = outputBuffer2DDepth)
 
   // i0
   pingPongRegs2D.io.weightBufferRdy := io.weightBufferRdy
   loopCtrl2D.io.config.assignAllByName(io.configParaPorts)
   loopCtrl2D.io.loadConfig   := io.loadConfig
-  featureMapBuffer.io.switch := io.fMapSwitch
   pingPongRegs2D.io.ifMapRdy := io.ifMapRdy
   outputBuffer2D.io.rAddr    := io.outputBufferRAddr
   outputBuffer2D.io.rdEn     := io.outputBufferRd

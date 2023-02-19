@@ -9,6 +9,8 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class Conv2P1Test extends AnyFlatSpec {
 
+  " conv2p1 " should "run in high frequency" in MyVivadoAction(Conv2P1(), "conv_2_plus_1", SYNTH)
+
   val config2D: ConvConfig = ConvConfig(convType = ConvType.D2, Uic = 4, Nic = 5, Uoc = 16, Noc = 18, Nihw = 6, Nid = 4, stride = 1, K = 3, padding = 1)
   val config1D: ConvConfig =
     ConvConfig(

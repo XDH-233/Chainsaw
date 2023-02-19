@@ -14,11 +14,11 @@ object Parameter {
   val NohwMax2D = 56
   val NihwMax1D = 56
   val NohwMax1D = 56
-  val featureMapDepth: Int = 100 * 4 * 1024 // 100k
+  val featureMapDepth: Int = 25 * 4 * 1024
 
-  val weightBuffer2DDepth: Int = 152 * 1024 // 152k
-  val weightBuffer1DDepth: Int = 16 * 1024 // 16k
-  val outputBuffer2DDepth: Int = 208 * 4 * 1024
+  val weightBuffer2DDepth: Int = 38 * 4 * 1024
+  val weightBuffer1DDepth: Int = 4 * 4 * 1024 // 16k
+  val outputBuffer2DDepth: Int = 13 * 4 * 1024
 
   val ifMapSizeMax2D: Int = 16 * 112 * 112
   val ifMapSizeMax1D: Int = 16 * 56 * 56

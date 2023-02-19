@@ -36,28 +36,32 @@ class FeatureMapBufferTest extends org.scalatest.flatspec.AnyFlatSpec {
       io.readEn1DPE #= false
       io.rAddr2DPE  #= 0
       io.rAddr1DPE  #= 0
-      io.switch     #= false
       clockDomain.waitSampling()
 
-      (0 until 20).foreach { i =>
+      (0 until 10).foreach { i =>
         io.we    #= true
         io.wAddr #= i
         io.wData.randomize()
         clockDomain.waitSampling()
       }
-      io.we     #= false
-      io.switch #= true
+      io.we #= false
       clockDomain.waitSampling()
-      io.switch #= false
-      clockDomain.waitSampling()
-      (0 until 10).foreach { i =>
-        io.readEn2DPE #= true
-        io.readEn1DPE #= true
-        io.rAddr2DPE  #= i
-        io.rAddr1DPE  #= i + 10
+      (0 until 5).foreach { i =>
+        io.rAddr1DPEVld #= true
+        io.rAddr2DPEVld #= true
+        io.readEn2DPE   #= true
+        io.readEn1DPE   #= true
+        io.rAddr2DPE    #= i
+        io.rAddr1DPE    #= i + 5
         clockDomain.waitSampling()
       }
-      clockDomain.waitSampling(5)
+      io.rAddr2DPEVld #= false
+      io.rAddr2DPE    #= 2
+      clockDomain.waitSampling()
+      io.rAddr2DPEVld #= true
+      io.rAddr2DPE    #= 4
+      clockDomain.waitSampling(10)
+
     }
 
 }

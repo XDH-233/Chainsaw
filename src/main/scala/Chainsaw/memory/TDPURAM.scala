@@ -27,59 +27,6 @@ case class TDPURAM(width: Int, depth: Int, pipeRegCount: Int = 4) extends BlackB
   noIoPrefix()
   mapClockDomain(clock = io.clk, reset = io.reset)
 
-  def portWrite(en: Bool, we: Bool, addr: UInt, data: Bits, name: String): Unit = {
-    name match {
-      case "a" => {
-        io.mem_ena := en
-        io.wea     := we
-        io.addra   := addr
-        io.dina    := data
-      }
-      case "b" => {
-        io.mem_enb := en
-        io.web     := we
-        io.addrb   := addr
-        io.dinb    := data
-      }
-    }
-  }
-
-  def portClose(name: String): Unit = {
-    name match {
-      case "a" => {
-        io.wea.clear()
-        io.dina.clearAll()
-        io.mem_ena.clear()
-        io.addra.clearAll()
-      }
-      case "b" => {
-        io.web.clear()
-        io.dinb.clearAll()
-        io.mem_enb.clear()
-        io.addrb.clearAll()
-      }
-    }
-  }
-
-  def portRead(en: Bool, addr: UInt, data: Bits, name: String): Unit = {
-    name match {
-      case "a" => {
-        io.mem_ena := en
-        io.addra   := addr
-        io.wea.clear()
-        io.dina.clearAll()
-        data := io.douta
-      }
-      case "b" => {
-        io.mem_enb := en
-        io.addrb   := addr
-        io.web.clear()
-        io.dinb.clearAll()
-        data := io.doutb
-      }
-    }
-  }
-
   addGenerics(("DEPTH", depth), ("DWIDTH", width), ("NBPIPE", pipeRegCount - 1))
 
   setInlineVerilog("""

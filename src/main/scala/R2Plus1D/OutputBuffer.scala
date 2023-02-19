@@ -6,6 +6,7 @@ import Chainsaw._
 import Chainsaw.memory._
 
 case class OutputBuffer(dataWidth: Int = 8, uc: Int = Parameter.Uc, pipeRegsCount: Int = 4, depth: Int = Parameter.outputBuffer2DDepth) extends Component {
+  val readLatency: Int = pipeRegsCount + 1
   val io = new Bundle {
     val we:    Bool = in Bool ()
     val wAddr: UInt = in UInt (log2Up(depth) bits)

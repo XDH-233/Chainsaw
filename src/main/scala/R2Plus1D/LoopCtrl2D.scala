@@ -7,8 +7,7 @@ import Chainsaw._
 
 import scala.language.postfixOps
 
-case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLatencyURAM: Int = 4, PELatency: Int = 5, readLatencyBRAM: Int = 2)
-    extends Component {
+case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLatencyURAM: Int = 5, PELatency: Int = 5, accLatency: Int = 2) extends Component {
   val io = new Bundle {
 
     val config: ConfigParaPorts2D = in(ConfigParaPorts2D())
@@ -185,7 +184,7 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
   val twOfMapAddr:      GeneralCounter = GeneralCounter(step = Nd * Tow, top = Nohw * Nd, en = io.loadConfig)
   val thOfMapAddr:      GeneralCounter = GeneralCounter(step = Nohw * Nd * Toh, top = Nohw * Nohw * Nd, en = io.loadConfig)
   val toOfMapAddr:      GeneralCounter = GeneralCounter(step = ofMapSize, top = ofMapSize * NcDUcCeil, en = io.loadConfig)
-  val ofMapAddrLatency: Int            = readLatencyURAM + readLatencyBRAM + PELatency
+  val ofMapAddrLatency: Int            = readLatencyURAM + accLatency + PELatency
   when(io.filled.d(ofMapAddrLatency)) {
     odOfMapAddr.inc()
   }
@@ -207,7 +206,7 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
     toOfMapAddr.inc()
   }
   io.ofMapAddr    := Function.CounterSum(odOfMapAddr, stwOfMapAddr, sthOfMapAddr, twOfMapAddr, thOfMapAddr, toOfMapAddr).resized
-  io.ofMapAddrVld := (th.value + sth.value < Nohw & tw.value + stw.value < Nohw) d (readLatencyURAM + readLatencyBRAM + PELatency)
+  io.ofMapAddrVld := (th.value + sth.value < Nohw & tw.value + stw.value < Nohw) d (readLatencyURAM + accLatency + PELatency)
   // -------------------------------accRAM Addr-------------------------------------------------------------------------
   val accRAMAddrCounter: GeneralCounter = GeneralCounter(step = U(1), top = Nd * Tow * Toh, en = io.loadConfig)
   io.accRamAddr := accRAMAddrCounter.value.resized
@@ -215,12 +214,13 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
     accRAMAddrCounter.inc()
   }
   io.writeAcc := io.ifMapRdEn.d(readLatencyURAM + PELatency)
-  io.doutEn   := ti.willOverFlowIfInc.d(readLatencyURAM + PELatency)
-  io.ofMapWe  := ti.willOverFlowIfInc.d(readLatencyURAM + PELatency + readLatencyBRAM)
-  io.ofMapBuffer2DRdy.setWhen((io.readDone & io.layerDone).d(readLatencyURAM + PELatency + readLatencyBRAM))
+  println("PE" + PELatency)
+  io.doutEn  := ti.willOverFlowIfInc.d(readLatencyURAM + PELatency)
+  io.ofMapWe := ti.willOverFlowIfInc.d(readLatencyURAM + PELatency + accLatency)
+  io.ofMapBuffer2DRdy.setWhen((io.readDone & io.layerDone).d(readLatencyURAM + PELatency + accLatency))
   io.ofMapBuffer2DRdy.clearWhen(io.filled)
 
-  io.toWriteDone := (to.willInc.d(readLatencyURAM + PELatency + readLatencyBRAM))
+  io.toWriteDone := (to.willInc.d(readLatencyURAM + PELatency + accLatency))
 
   // --------------------------------------------------------------------------------------------------------------------
   // clear counters
@@ -248,7 +248,7 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
       krIfMapAddr,
       tiIfMapAddr
     ).foreach(_.clear())
-    when((io.layerDone & io.readDone).d(readLatencyURAM + PELatency + readLatencyBRAM)) {
+    when((io.layerDone & io.readDone).d(readLatencyURAM + PELatency + accLatency)) {
       Seq(odOfMapAddr, stwOfMapAddr, sthOfMapAddr, twOfMapAddr, thOfMapAddr, toOfMapAddr).foreach(_.clear())
     }
   }
