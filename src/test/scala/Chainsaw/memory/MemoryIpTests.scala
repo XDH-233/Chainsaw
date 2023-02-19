@@ -1,49 +1,69 @@
 package Chainsaw.memory
 
-import Chainsaw.deprecated.{ChainsawTest, DelayByRam}
-import Chainsaw.{ChainsawFlatSpec, ChainsawImpl}
-import spinal.core.sim.{SimConfig, _}
-
-import scala.util.Random
+import Chainsaw.{ChainsawFlatSpec, NumericType, TestConfig}
 
 class MemoryIpTests extends ChainsawFlatSpec {
 
-  "belay by Ram" should "work" in {
-    val width = 64
-    val delay = 128
-    val data = Seq.fill(1000)(BigInt(width, Random))
-    ChainsawTest("testDelayByram", DelayByRam(width, delay), data).doTest()
+  def testP2S(): Unit = {
+    testOperator(P2S(p = 8, s = 4, bitWidth = 16), generatorConfigTable("P2S"))
   }
 
-  it should "run at a high fmax with a huge size" in ChainsawImpl(DelayByRam(512, 1024), "implDelayByRam")
-
-  val delayMax = 100
-  val width = 32
-
-  SimConfig.withFstWave.compile(DynamicDelay(width, delayMax)).doSim { dut =>
-    import dut._
-
-    def locked = lockedOut.toBoolean
-
-    def actuallyLocked(i: Int, delay: Int) = i - dataOut.toBigInt == delay
-
-    delayIn #= 13
-    clockDomain.forkStimulus(2)
-    clockDomain.waitSampling()
-    (0 until 100).foreach { i =>
-      dataIn #= i
-      clockDomain.waitSampling()
-      if (locked) assert(actuallyLocked(i, 13))
-    }
-
-    delayIn #= 21
-    clockDomain.waitSampling() // state transition
-
-    (0 until 200).foreach { i =>
-      dataIn #= i
-      clockDomain.waitSampling()
-      if (locked) assert(actuallyLocked(i, 21))
-    }
+  def testHeaderInserter(): Unit = {
+    testOperator(
+      FlowHeaderInserter(Seq(BigInt("ffeeddcc", 16)), 32),
+      generatorConfigTable("FlowHeaderInserter")
+    )
+    testOperator(
+      FlowHeaderInserter(
+        Seq(BigInt("ffeeddcc", 16), BigInt("00112233", 16)),
+        32
+      ),
+      generatorConfigTable("FlowHeaderInserter")
+    )
   }
 
+  def testWidthConverter(): Unit = {
+    testOperator(
+      FlowWidthConverter(16, 14, 2),
+      generatorConfigTable("FlowWidthConverter")
+    )
+    testOperator(
+      FlowWidthConverter(14, 16, 2),
+      generatorConfigTable("FlowWidthConverter")
+    )
+  }
+
+  def testDynamicDownSample(): Unit = {
+    testOperator(
+      DynamicDownSample(100, NumericType.U(16)),
+      generatorConfigTable("DynamicDownSample")
+    )
+  }
+
+  override def generatorConfigTable = Map(
+    "P2S" -> TestConfig(full = true, naive = false, synth = true, impl = false),
+    "FlowHeaderInserter" -> TestConfig(
+      full  = true,
+      naive = false,
+      synth = true,
+      impl  = false
+    ),
+    "FlowWidthConverter" -> TestConfig(
+      full  = true,
+      naive = false,
+      synth = true,
+      impl  = false
+    ),
+    "DynamicDownSample" -> TestConfig(
+      full  = true,
+      naive = false,
+      synth = true,
+      impl  = false
+    )
+  )
+
+  testP2S()
+  testHeaderInserter()
+  testWidthConverter()
+  testDynamicDownSample()
 }

@@ -1,16 +1,24 @@
 package Chainsaw.arithmetic
 
 import Chainsaw._
-import Chainsaw.arithmetic.flopoco.XilinxGpc
+import Chainsaw.arithmetic.bitheap.Bit
+import Chainsaw.arithmetic.flopoco.{FlopocoBlackBox, XilinxGpc}
+import Chainsaw.device.LUT6_2
 import Chainsaw.xilinx._
 import spinal.core._
 import spinal.core.sim.SpinalSimBackendSel.GHDL
+import spinal.core._
+import spinal.core.sim._
+import spinal.lib._
+import spinal.lib.fsm._
 
-abstract class Gpc extends ChainsawOperatorGenerator with Compressor {
+import scala.math.BigInt
 
-  def name = s"${className(this)}"
+abstract class Gpc extends CompressorGenerator {
 
-  override def simBackEnd = GHDL
+  def name =
+    s"${className(this)}_${if (shouldDoComplement) hashName(getComplementHeap)
+    else "noComplement"}"
 
   // column in
   override def inputTypes =
@@ -24,63 +32,73 @@ abstract class Gpc extends ChainsawOperatorGenerator with Compressor {
 
   val inputWeights = inputFormat.zipWithIndex.filter(_._1 > 0).map(_._2)
 
-  override def impl(testCase: TestCase) = {
-    val ret = testCase.data.zip(inputWeights).map { case (bit, weight) =>
-      bit.toBigInt().toString(2).count(_ == '1') << weight
-    }.sum
-    Seq(BigDecimal(ret))
-  }
-
   override def metric(yours: Seq[BigDecimal], golden: Seq[BigDecimal]) = {
     yours.head.toBigInt() == golden.head.toBigInt()
   }
 
-  override def testCases = Seq.fill(100)(randomTestCase)
-
-  override def compress(bitsIn: BitHeapHard) = ???
-
   override def implNaiveH = Some(new ChainsawOperatorModule(this) {
-    val ret = dataIn.zip(inputWeights).map { case (bits, weight) =>
-      bits.asBits.asBools.map(_.asUInt).reduce(_ +^ _) << weight
-    }.reduce(_ +^ _)
+    val ret = dataIn
+      .zip(inputWeights)
+      .map { case (bits, weight) =>
+        bits.asBits.asBools.map(_.asUInt).reduce(_ +^ _) << weight
+      }
+      .reduce(_ +^ _)
     dataOut.head := ret.toAFix.truncated
   })
-
-  // TODO: get rid of flopoco and VHDL(by using verilog blackbox / primitives)
-  override def useNaive = if (!super.useNaive && testVhdl) false else true
-
-  val flopocoGen = XilinxGpc(inputFormat.reverse, outputFormat.length)
-  require(flopocoGen.latency() == 0)
-
-  override def implH = flopocoGen.implH
 }
 
-/** --------
- * from flopoco, clbCost = 0.5
- * -------- */
-class HalfClbCompressor(override val inputFormat: Seq[Int]) extends Gpc {
+/** -------- built by Xilinx primitives
+  * --------
+  */
 
-  override def outputFormat = Seq.fill(5)(1)
+case class Compressor6to3(override val complementHeap: Seq[Seq[Boolean]] = null)
+    extends Gpc {
 
-  override def vivadoUtilEstimation = VivadoUtilEstimation(lut = 4, carry8 = 1) // clbCost = 0.5, can two of this share the same CARRY8?
+  override def inputFormat = Seq.fill(1)(6)
+
+  override def outputFormat = Seq.fill(3)(1)
+
+  override def vivadoUtilEstimation = VivadoUtil(lut = 3, ff = outputFormat.sum)
+
+  override def implH = new ChainsawOperatorModule(this) {
+    val lutValues = Seq(
+      BigInt("6996966996696996", 16),
+      BigInt("8117177e177e7ee8", 16),
+      BigInt("fee8e880e8808000", 16)
+    )
+    val inverseList = getComplementHeap.head.padTo(6, true).map(!_)
+    val dataBitsIn  = dataIn.head.raw.asBools
+    val lutOuts = lutValues
+      .map(LUT6_2.getValueWithInverse(_, inverseList))
+      .map(LUT6_2.process(dataBitsIn, _).last)
+    dataOut.head := lutOuts.asBits().asUInt.toAFix
+  }
 }
 
-object Compressor606 extends HalfClbCompressor(Seq(6, 0, 6).reverse)
+case class Compressor3to2(override val complementHeap: Seq[Seq[Boolean]] = null)
+    extends Gpc {
 
-object Compressor607 extends HalfClbCompressor(Seq(6, 0, 7).reverse)
+  override def inputFormat = Seq.fill(1)(3)
 
-object Compressor615 extends HalfClbCompressor(Seq(6, 1, 5).reverse)
+  override def outputFormat = Seq.fill(2)(1)
 
-object Compressor623 extends HalfClbCompressor(Seq(6, 2, 3).reverse)
+  override def vivadoUtilEstimation = VivadoUtil(lut = 1, ff = outputFormat.sum)
 
-object Compressor1325 extends HalfClbCompressor(Seq(1, 3, 2, 5).reverse)
+  override def implH = new ChainsawOperatorModule(this) {
+    val lutValues = BigInt("96969696e8e8e8e8", 16)
+    val inverseList =
+      getComplementHeap.head.padTo(3, true).map(!_) ++ Seq.fill(3)(false)
+    val dataBitsIn    = dataIn.head.raw.asBools // low to high
+    val inversedValue = LUT6_2.getValueWithInverse(lutValues, inverseList)
+    val lutOuts =
+      LUT6_2.process(dataBitsIn ++ Seq(False, False, True), inversedValue)
+    dataOut.head := lutOuts.reverse.asBits().asUInt.toAFix
+  }
+}
 
-object Compressor1415 extends HalfClbCompressor(Seq(1, 4, 1, 5).reverse)
-
-object Compressor1406 extends HalfClbCompressor(Seq(1, 4, 0, 6).reverse)
-
-object Compressor1407 extends HalfClbCompressor(Seq(1, 4, 0, 7).reverse)
-
-object Compressor2117 extends HalfClbCompressor(Seq(2, 1, 1, 7).reverse)
-
-// TODO: more GPC of other size
+object Gpcs {
+  def apply(): Seq[Gpc] = Seq(
+    Compressor6to3(),
+    Compressor3to2()
+  )
+}

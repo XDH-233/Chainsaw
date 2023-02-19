@@ -27,7 +27,7 @@ class IoAlign extends Phase {
     require(gen.inputTimes.min == 0)
 
     module.rework {
-      // TODO: pad flowIn and flowOut correctly
+      // TODO: pad flowIn and flowOut.npz correctly
       val newFlowIn = slave Flow Fragment(cloneOf(module.dataIn))
       module.validIn.setAsDirectionLess().allowDirectionLessIo
       module.lastIn.setAsDirectionLess().allowDirectionLessIo
@@ -39,7 +39,7 @@ class IoAlign extends Phase {
         input := buf(newInput, time)
       }
       module.flowInPointer = newFlowIn
-
+      module.flowIn.simPublic()
     }
 
     logger.info(s"[Progress] Chainsaw IoAlign phase done")

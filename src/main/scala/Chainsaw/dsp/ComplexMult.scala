@@ -2,7 +2,7 @@ package Chainsaw.dsp
 
 import Chainsaw.NumericExt._
 import Chainsaw._
-import Chainsaw.xilinx.VivadoUtilEstimation
+import Chainsaw.xilinx.VivadoUtil
 import spinal.core._
 import spinal.core.sim._
 import spinal.lib._
@@ -10,9 +10,9 @@ import spinal.lib.fsm._
 
 import scala.language.postfixOps
 
-case class ComplexMult(dataType: NumericType,
-                       coeffType: NumericType)
-  extends ChainsawOperatorGenerator {
+case class ComplexMult(dataType: NumericType, coeffType: NumericType)
+    extends ChainsawOperatorGenerator
+    with FixedLatency {
 
   val retType = (dataType * coeffType).withCarry(1)
 
@@ -20,7 +20,7 @@ case class ComplexMult(dataType: NumericType,
 
   override def outputTypes = Seq(retType, retType)
 
-  override def vivadoUtilEstimation = VivadoUtilEstimation(dsp = 3, lut = 10)
+  override def vivadoUtilEstimation = VivadoUtil(dsp = 3, lut = 10)
 
   override def fmaxEstimation = 600 MHz
 
@@ -34,8 +34,10 @@ case class ComplexMult(dataType: NumericType,
     val biD2 = bi.d(2)
     // dsp operation and regs inside dsp
     val mid = ((br.d() +^ bi.d()).d() * ar.d(2)).d(2)
-    val productImag = (mid.d() + ((aiD2.d() -^ arD1.d(2)).d() * brD2.d(2)).d()).d()
-    val productReal = (mid.d() - ((aiD2.d() +^ arD1.d(2)).d() * biD2.d(2)).d()).d()
+    val productImag =
+      (mid.d() + ((aiD2.d() -^ arD1.d(2)).d() * brD2.d(2)).d()).d()
+    val productReal =
+      (mid.d() - ((aiD2.d() +^ arD1.d(2)).d() * biD2.d(2)).d()).d()
     dataOut := Seq(productReal, productImag).map { sint =>
       val ret = retType()
       ret := sint
@@ -49,9 +51,9 @@ case class ComplexMult(dataType: NumericType,
 
   override def name = s"ComplexMult_${dataType}_$coeffType"
 
-  /** --------
-   * model
-   * -------- */
+  /** -------- model
+    * --------
+    */
   override def impl(testCase: TestCase) = {
     val Seq(ar, ai, br, bi) = testCase.data
     Seq(ar * br - ai * bi, ar * bi + ai * br)
@@ -62,7 +64,3 @@ case class ComplexMult(dataType: NumericType,
 
   override def testCases = Seq.fill(100)(TestCase(randomDataVector))
 }
-
-
-
-

@@ -64,8 +64,6 @@ object S2M extends CpaMode
 
 object S2S extends CpaMode
 
-trait ChainsawSolution
-
 sealed trait FilterType extends ChainsawEnum
 
 object Direct1 extends FilterType
@@ -103,3 +101,33 @@ sealed trait DdsSignalType extends ChainsawEnum
 object SINE extends DdsSignalType
 
 object PULSE extends DdsSignalType
+
+sealed trait EdaFlowType extends ChainsawEnum
+
+object SYNTH extends EdaFlowType
+
+object IMPL extends EdaFlowType
+
+sealed trait CompressionStrategy extends ChainsawEnum
+object ReFirst extends CompressionStrategy // ReductionEfficiency First
+object HrFirst extends CompressionStrategy // HeightReduction First
+
+sealed trait UtilRequirementStrategy extends ChainsawEnum
+object DefaultRequirement
+    extends UtilRequirementStrategy // warning when ff < lut*2, don't care about carry8, 5% for tolerant
+object PreciseRequirement extends UtilRequirementStrategy // ff and carry8 are considered
+object NoRequirement extends UtilRequirementStrategy
+
+sealed trait RamType extends ChainsawEnum
+
+object LUTRAM extends RamType
+
+object BRAM extends RamType
+
+object URAM extends RamType
+
+sealed trait MwNrMode extends ChainsawEnum
+
+object PURELOGIC extends MwNrMode
+object REPLICATION extends MwNrMode
+object MULTIPUMPING extends MwNrMode

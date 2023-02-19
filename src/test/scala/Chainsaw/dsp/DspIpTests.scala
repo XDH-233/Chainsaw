@@ -1,128 +1,241 @@
 package Chainsaw.dsp
 
 import Chainsaw._
-import Chainsaw.deprecated.testConfigurations.{cordicImpl, cordicSynth, ddsImpl, ddsSynth, delayImpl, delaySynth, filterImpl, filterSynth, movingAverageImpl, movingAverageSynth}
 import spinal.core.{False, IntToBuilder}
 
 import scala.language.postfixOps
 import scala.util.Random
+import spinal.core._
+import spinal.lib._
+import spinal.lib.fsm._       // for finite state machine dialect
+import spinal.lib.bus._       // for all kinds of bus and regIf
+import spinal.lib.bus.regif._ // for regIf
+import spinal.sim._           // for simulation
+import spinal.core.sim._ // for more simulation
 
 class DspIpTests extends ChainsawFlatSpec {
 
-  /** --------
-   * parameters
-   * -------- */
-  val coeffType = NumericType(2, 14, signed = true)
-  val dataType = NumericType(2, 14, signed = true)
-  val ddsType = NumericType(1, 16, signed = true)
+  /** -------- parameters
+    * --------
+    */
+  val coeffType: NumericType = NumericType.SFix(2, 14)
+  val dataType: NumericType  = NumericType.SFix(2, 14)
+  val ddsType: NumericType   = NumericType(1, 16, signed = true)
 
   val testIteration = 12
-  val testFraction = 16
+  val testFraction  = 16
 
-  val coeffLengths = Seq(5, 11, 17)
-  val coeffs = coeffLengths.map(Seq.fill(_)(Random.nextDouble()))
-  val symmetricCoeffs = coeffs.map(coeff => coeff ++ coeff.reverse)
-
-  val symmetrics = Seq(true, false)
-  val parallelFactors = Seq(4)
-
-  val sizeMax = 50
+  val sizeMax   = 50
   val parallels = 1 to 4
-  val dynamics = Seq(true, false)
+  val dynamics  = Seq(true, false)
 
   val delay = 179
 
-  /** --------
-   * COMPLEX
-   * -------- */
+  /** -------- COMPLEX
+    * --------
+    */
 
-  def testComplexMult(): Unit = testOperator(ComplexMult(dataType, dataType), generatorConfigTable("ComplexMult"))
+  def testComplexMult(): Unit = testOperator(
+    ComplexMult(dataType, dataType),
+    generatorConfigTable("ComplexMult")
+  )
 
-  /** --------
-   * CORDIC
-   * -------- */
+  /** -------- CORDIC
+    * --------
+    */
 
   def testCordic(): Unit = {
     // CORDIC under all 6 modes
-    val algebraicModes = Seq(CIRCULAR)
-    val rotationModes = Seq(ROTATION, VECTORING)
+    val algebraicModes = Seq(CIRCULAR, HYPERBOLIC, LINEAR)
+    val rotationModes  = Seq(ROTATION, VECTORING)
     algebraicModes.foreach(alg =>
       rotationModes.foreach(rot =>
-        testOperator(Cordic(alg, rot, iteration = testIteration, fractional = testFraction), generatorConfigTable("Cordic"))
+        testOperator(
+          Cordic(
+            alg,
+            rot,
+            iteration  = testIteration,
+            fractional = testFraction
+          ),
+          generatorConfigTable("Cordic")
+        )
       )
     )
 
     // most frequently used CORDIC modes(with initValues)
-    testOperator(ComplexToMagnitudeAngle(iteration = testIteration, fractional = testFraction), generatorConfigTable("Cordic"))
-    testOperator(CordicCos(iteration = testIteration, fractional = testFraction), generatorConfigTable("Cordic"))
-    testOperator(CordicSin(iteration = testIteration, fractional = testFraction), generatorConfigTable("Cordic"))
+    testOperator(
+      CordicMagnitudePhase(
+        iteration  = testIteration,
+        fractional = testFraction
+      ),
+      generatorConfigTable("Cordic")
+    )
+    testOperator(
+      CordicCosSin(iteration = testIteration, fractional = testFraction),
+      generatorConfigTable("Cordic")
+    )
+    testOperator(
+      CordicMultiplication(iteration = testIteration, fractional = testFraction),
+      generatorConfigTable("Cordic")
+    )
+    testOperator(
+      CordicDivision(iteration = testIteration, fractional = testFraction),
+      generatorConfigTable("Cordic")
+    )
+    testOperator(
+      CordicHyperFunction(iteration = testIteration, fractional = testFraction),
+      generatorConfigTable("Cordic")
+    )
+    testOperator(
+      CordicRotate(iteration = testIteration, fractional = testFraction),
+      generatorConfigTable("Cordic")
+    )
   }
 
-  /** --------
-   * FIRs
-   * -------- */
+  /** -------- FIRs
+    * --------
+    */
 
   def testFirs(): Unit = {
 
+    val coeffLengths = Seq(17, 25, 33)
+    val coeffs = coeffLengths.map(
+      designFilter(_, Seq(1.6 MHz), 240 MHz, "lowpass").map(_.toDouble)
+    )
+    val symmetricCoeffs = coeffs.map(coeff => coeff ++ coeff.reverse)
+
+    val symmetrics      = Seq(true, false)
+    val parallelFactors = Seq(4)
+
     // Pipelined FIR
-    //    coeffs.foreach(coeff => testDspGenerator(FirNew(coeff, coeffType, dataType), synth = filterSynth, impl = filterImpl))
+    coeffs.foreach(coeff => testOperator(Fir(coeff, coeffType, dataType), generatorConfigTable("Fir")))
     // Pipelined FIR with symmetric coefficients
-    symmetricCoeffs.foreach(coeff => testOperator(Fir(coeff, coeffType, dataType, symmetric = true), generatorConfigTable("Fir")))
+    symmetricCoeffs.foreach(coeff =>
+      testOperator(
+        Fir(coeff, coeffType, dataType, symmetric = true),
+        generatorConfigTable("Fir")
+      )
+    )
     // Parallel FIR by poly phase decomposition
     coeffs.foreach(coeff =>
       parallelFactors.foreach { parallelFactor =>
-        testOperator(ParallelFir(coeff, coeffType, dataType, parallelFactor), generatorConfigTable("Fir"))
-      })
+        testOperator(
+          ParallelFir(coeff, coeffType, dataType, parallelFactor),
+          generatorConfigTable("Fir")
+        )
+      }
+    )
   }
 
-  /** --------
-   * UNWRAP
-   * -------- */
+  /** -------- UNWRAP
+    * --------
+    */
 
-  /** --------
-   * DDS
-   * -------- */
+  /** -------- DDS
+    * --------
+    */
 
   def testDds(): Unit = {
-    testOperator(Dds(ddsWave = DdsWave(SINE, 250 MHz, 80 MHz, 1, 0), dataType = ddsType, parallel = 2), generatorConfigTable("Dds"))
-    testOperator(Dds(ddsWave = DdsWave(SINE, 250 MHz, 80 MHz, 1, 0, complex = true), dataType = ddsType, parallel = 2), generatorConfigTable("Dds"))
+    testOperator(
+      Dds(
+        ddsWave  = DdsWave(SINE, 250 MHz, 80 MHz, 1, 0),
+        dataType = ddsType,
+        parallel = 2
+      ),
+      generatorConfigTable("Dds")
+    )
+    testOperator(
+      Dds(
+        ddsWave  = DdsWave(SINE, 250 MHz, 80 MHz, 1, 0, complex = true),
+        dataType = ddsType,
+        parallel = 2
+      ),
+      generatorConfigTable("Dds")
+    )
   }
-
-  /** --------
-   * MOVING AVERAGE
-   * -------- */
-  //
-  //  def testMovingAverage(): Unit = {
-  //    dynamics.foreach { dynamic =>
-  //      parallels.foreach { parallel =>
-  //        testDspGenerator(MovingAverage(sizeMax, dynamic, dataType, parallel), synth = movingAverageSynth, impl = movingAverageImpl)
-  //      }
-  //    }
-  //  }
 
   def testDelay(): Unit = {
     parallels.foreach { parallel =>
-      if (parallel == 1) testOperator(DynamicDelay(delay, dataType, parallel), generatorConfigTable("DynamicDelay"))
+      if (parallel == 1)
+        testOperator(
+          DynamicDelay(delay, dataType, parallel),
+          generatorConfigTable("DynamicDelay")
+        )
     }
   }
 
-  /** --------
-   * tests
-   * -------- */
+  /** -------- MOVING AVERAGE
+    * --------
+    */
+  def testMovingAverage(): Unit = {
+    val sizes = Seq(20, 50, 100)
+    sizes.foreach(size =>
+      testOperator(
+        DynamicMovingAverage(size, dataType),
+        generatorConfigTable("MovingAverage")
+      )
+    )
+  }
 
-  override def generatorConfigTable = Map(
-    "ComplexMult" ->  TestConfig(full = true, naive = false, synth = true, impl = false),
-    "Cordic" ->       TestConfig(full = true, naive = false, synth = true, impl = false),
-    "DynamicDelay" -> TestConfig(full = true, naive = false, synth = true, impl = false),
-    "Fir" ->          TestConfig(full = true, naive = false, synth = true, impl = false),
-    "Dds" ->          TestConfig(full = true, naive = false, synth = true, impl = false),
+  def testUnwrap() = {
+    testOperator(
+      UnwrapPointByPoint(NumericType.SFix(10, 14)),
+      generatorConfigTable("Unwrap")
+    )
+  }
+
+  def testPeriodicUnwrap() = {
+    testOperator(
+      PeriodicUnwrap(NumericType.SFix(10, 14), 20),
+      generatorConfigTable("Unwrap")
+    )
+  }
+
+  /** -------- tests
+    * --------
+    */
+
+  override def generatorConfigTable: Map[String, TestConfig] = Map(
+    "ComplexMult" -> TestConfig(
+      full  = true,
+      naive = false,
+      synth = true,
+      impl  = false
+    ),
+    "Cordic" -> TestConfig(
+      full  = true,
+      naive = false,
+      synth = true,
+      impl  = false
+    ),
+    "DynamicDelay" -> TestConfig(
+      full  = true,
+      naive = false,
+      synth = true,
+      impl  = false
+    ),
+    "Fir" -> TestConfig(full = true, naive = false, synth = true, impl = false),
+    "Dds" -> TestConfig(full = true, naive = false, synth = true, impl = false),
+    "MovingAverage" -> TestConfig(
+      full  = true,
+      naive = false,
+      synth = true,
+      impl  = false
+    ),
+    "Unwrap" -> TestConfig(
+      full  = true,
+      naive = false,
+      synth = true,
+      impl  = false
+    )
   )
 
-  testComplexMult()
-  testCordic()
-  testDelay()
-  testFirs()
-  testDds()
-  //  testMovingAverage()
-
+//  testComplexMult()
+//  testCordic()
+//  testDelay()
+//  testDds()
+  testMovingAverage()
+//  testFirs()
+//  testUnwrap()
+//  testPeriodicUnwrap()
 }

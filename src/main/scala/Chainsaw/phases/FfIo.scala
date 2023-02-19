@@ -5,6 +5,9 @@ import spinal.core._
 import spinal.core.internals._
 import spinal.lib._
 
+/** add FFs before input / after output for meaningful synthesis timing report
+ *
+ */
 class FfIo extends Phase {
   override def impl(pc: PhaseContext): Unit = {
 
@@ -18,10 +21,10 @@ class FfIo extends Phase {
           //Do nothing
         } else if (io.isInput) {
           io.setAsDirectionLess().allowDirectionLessIo //allowDirectionLessIo is to disable the io Bundle linting
-          io := buf(in(cloneOf(io).setName(io.getName() + "_wrap")))
+          io := buf(in(cloneOf(io).setName(io.getName() + "_wrap", weak = true)))
         } else if (io.isOutput) {
           io.setAsDirectionLess().allowDirectionLessIo
-          out(cloneOf(io).setName(io.getName() + "_wrap")) := buf(io)
+          out(cloneOf(io).setName(io.getName() + "_wrap", weak = true)) := buf(io)
         } else ???
       }
     }

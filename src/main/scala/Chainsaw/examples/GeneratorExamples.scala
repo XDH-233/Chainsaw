@@ -11,10 +11,13 @@ import Chainsaw.memory._
 
 // TODO: formal examples
 
-case class ExampleAdder(width: Int) extends ChainsawOperatorGenerator {
+case class ExampleAdder(width: Int)
+    extends ChainsawOperatorGenerator
+    with FixedLatency {
   override def impl(testCase: TestCase) = Seq(testCase.data.sum)
 
-  override def metric(yours: Seq[BigDecimal], golden: Seq[BigDecimal]) = yours.equals(golden)
+  override def metric(yours: Seq[BigDecimal], golden: Seq[BigDecimal]) =
+    yours.equals(golden)
 
   override def testCases = Seq.fill(1000)(TestCase(randomDataVector))
 
@@ -22,7 +25,7 @@ case class ExampleAdder(width: Int) extends ChainsawOperatorGenerator {
 
   override def name = s"adder"
 
-  override def vivadoUtilEstimation = VivadoUtilEstimation(lut = width)
+  override def vivadoUtilEstimation = VivadoUtil(lut = width)
 
   override def fmaxEstimation = 600 MHz
 
@@ -49,7 +52,7 @@ case class ExampleAddSub(width: Int) extends ChainsawDynamicOperatorGenerator {
 
   override def testCases = {
     Seq.fill(10)(TestCase(randomDataVector, Seq(BigDecimal(1)))) ++ // for sub
-      Seq.fill(10)(TestCase(randomDataVector, Seq(BigDecimal(0)))) // for add
+      Seq.fill(10)(TestCase(randomDataVector, Seq(BigDecimal(0))))  // for add
   }
 
   override def controlTypes = Seq(NumericType.Bool())
@@ -68,7 +71,7 @@ case class ExampleAddSub(width: Int) extends ChainsawDynamicOperatorGenerator {
 
   override def name = s"addsub"
 
-  override def vivadoUtilEstimation = VivadoUtilEstimation(lut = width)
+  override def vivadoUtilEstimation = VivadoUtil(lut = width)
 
   override def fmaxEstimation = 600 MHz
 
@@ -78,17 +81,18 @@ case class ExampleAddSub(width: Int) extends ChainsawDynamicOperatorGenerator {
 
   override def outputTypes = Seq(NumericType.S(width + 1))
 
-  override def latency(control: Seq[BigDecimal]) = 1
 }
 
 case class ExampleStaticFlip(dataType: NumericType, length: Int)
-  extends ChainsawFrameGenerator {
+    extends ChainsawFrameGenerator
+    with FixedLatency {
 
   override def name = s"staticFlip"
 
   override def impl(testCase: TestCase) = testCase.data.reverse
 
-  override def metric(yours: Seq[BigDecimal], golden: Seq[BigDecimal]) = yours.equals(golden)
+  override def metric(yours: Seq[BigDecimal], golden: Seq[BigDecimal]) =
+    yours.equals(golden)
 
   override def testCases = Seq.fill(1000)(TestCase(randomInputFrame))
 
@@ -102,13 +106,13 @@ case class ExampleStaticFlip(dataType: NumericType, length: Int)
 
   override def implH = new ChainsawFrameModule(this) {
     val paddedLength = nextPow2(period).toInt
-    val ram = Mem(HardType(dataIn), paddedLength << 1)
+    val ram          = Mem(HardType(dataIn), paddedLength << 1)
 
     val counterWrite = Counter(length)
-    val counterRead = Counter(length)
-    val doWrite = validIn || counterWrite =/= U(0)
-    val writeFinish = RegNext(counterWrite.willOverflow, init = False)
-    val doRead = writeFinish || counterRead =/= U(0)
+    val counterRead  = Counter(length)
+    val doWrite      = validIn || counterWrite =/= U(0)
+    val writeFinish  = RegNext(counterWrite.willOverflow, init = False)
+    val doRead       = writeFinish || counterRead =/= U(0)
 
     when(doWrite)(counterWrite.increment())
     when(doRead)(counterRead.increment())
@@ -117,16 +121,17 @@ case class ExampleStaticFlip(dataType: NumericType, length: Int)
     when(counterWrite.willOverflow)(pingPongPointer := ~pingPongPointer)
 
     val writeAddr: UInt = pingPongPointer.asUInt @@ counterWrite.value
-    val readAddr: UInt = ~pingPongPointer.asUInt @@ (U(length - 1) - counterRead)
+    val readAddr: UInt =
+      ~pingPongPointer.asUInt @@ (U(length - 1) - counterRead)
 
     ram.write(writeAddr, dataIn, doWrite)
     dataOut := ram.readSync(readAddr)
-    lastOut := counterRead.willOverflow.d()
+    lastOut := lastIn.validAfter(latency())
   }
 
   override def implNaiveH = None
 
-  override def vivadoUtilEstimation = VivadoUtilEstimation()
+  override def vivadoUtilEstimation = VivadoUtil()
 
   override def fmaxEstimation = 600 MHz
 
@@ -136,7 +141,8 @@ case class ExampleStaticFlip(dataType: NumericType, length: Int)
 }
 
 case class ExampleDynamicFlip(dataType: NumericType, maxLength: Int)
-  extends ChainsawDynamicFrameGenerator {
+    extends ChainsawDynamicFrameGenerator
+    with FixedLatency {
 
   val innerMaxLength = maxLength + 2 // for FIFO latency
 
@@ -144,59 +150,66 @@ case class ExampleDynamicFlip(dataType: NumericType, maxLength: Int)
 
   override def impl(testCase: TestCase) = testCase.data.reverse
 
-  override def metric(yours: Seq[BigDecimal], golden: Seq[BigDecimal]) = yours.equals(golden)
+  override def metric(yours: Seq[BigDecimal], golden: Seq[BigDecimal]) =
+    yours.equals(golden)
 
   override def testCases =
-    Seq.fill(100)(TestCase(randomInputFrame(Seq(BigDecimal(10))), Seq(BigDecimal(10)))) ++ // for sub
-      Seq.fill(100)(TestCase(randomInputFrame(Seq(BigDecimal(20))), Seq(BigDecimal(20)))) // for add
+    Seq.fill(100)(
+      TestCase(randomInputFrame(Seq(BigDecimal(10))), Seq(BigDecimal(10)))
+    ) ++ // for sub
+      Seq.fill(100)(
+        TestCase(randomInputFrame(Seq(BigDecimal(20))), Seq(BigDecimal(20)))
+      ) // for add
 
-  override def latency(control: Seq[BigDecimal]) = innerMaxLength + 1
+  override def latency() = innerMaxLength + 1
 
   override def resetCycle = 0
 
-  override def inputFrameFormat(control: Seq[BigDecimal]) = MatrixFormat(1, control.head.toInt)
+  override def inputFrameFormat(control: Seq[BigDecimal]) =
+    MatrixFormat(1, control.head.toInt)
 
-  override def outputFrameFormat(control: Seq[BigDecimal]) = MatrixFormat(1, control.head.toInt)
+  override def outputFrameFormat(control: Seq[BigDecimal]) =
+    MatrixFormat(1, control.head.toInt)
 
   override def implH = new ChainsawDynamicFrameModule(this) {
 
     val paddedLength = nextPow2(innerMaxLength).toInt
-    val ram = Mem(HardType(dataIn), paddedLength << 1)
+    val ram          = Mem(HardType(dataIn), paddedLength << 1)
 
     // writing logic
     val counterWrite = Counter(paddedLength << 1, inc = validIn)
     ram.write(counterWrite.value, dataIn, validIn)
 
-    val control = controlIn.head.asUInt
+    val control          = controlIn.head.asUInt
     val counterWriteDone = DynamicCounter(control)
-    val doWrite = validIn || counterWriteDone =/= U(0)
+    val doWrite          = validIn || counterWriteDone =/= U(0)
     when(doWrite)(counterWriteDone.increment())
     val writeDone = counterWriteDone.willOverflow
 
     // reading logic
     val lastControl = control.d(innerMaxLength)
     val counterRead = DynamicCounter(lastControl)
-    val readValid = validIn.validAfter(innerMaxLength)
-    val doRead = readValid || counterRead =/= U(0)
+    val readValid   = validIn.validAfter(innerMaxLength)
+    val doRead      = readValid || counterRead =/= U(0)
     when(doRead)(counterRead.increment())
     val readDone = counterRead.willOverflow && readValid
 
-    val addrFifo = StreamFifo(UInt(log2Up(paddedLength << 1) bits), innerMaxLength)
-    addrFifo.io.push.valid := writeDone
+    val addrFifo =
+      StreamFifo(UInt(log2Up(paddedLength << 1) bits), innerMaxLength)
+    addrFifo.io.push.valid   := writeDone
     addrFifo.io.push.payload := counterWrite
-    addrFifo.io.pop.ready := readDone
+    addrFifo.io.pop.ready    := readDone
     val readAddrTop = addrFifo.io.pop.payload
 
     val readAddr: UInt = readAddrTop - counterRead
     dataOut := ram.readSync(readAddr)
 
-    validOut := validIn.validAfter(innerMaxLength + 1)
     lastOut := readDone.d()
   }
 
   override def implNaiveH = None
 
-  override def vivadoUtilEstimation = VivadoUtilEstimation()
+  override def vivadoUtilEstimation = VivadoUtil()
 
   override def fmaxEstimation = 600 MHz
 
@@ -208,12 +221,14 @@ case class ExampleDynamicFlip(dataType: NumericType, maxLength: Int)
 }
 
 case class ExampleStaticFir(dataType: NumericType, coeffs: Seq[Double])
-  extends ChainsawInfiniteGenerator {
+    extends ChainsawInfiniteGenerator
+    with FixedLatency {
 
   val productType = dataType * dataType
 
   override def impl(testCase: TestCase) = {
-    val dataWithZeros = testCase.data ++ Seq.fill(coeffs.length - 1)(BigDecimal(0))
+    val dataWithZeros =
+      testCase.data ++ Seq.fill(coeffs.length - 1)(BigDecimal(0))
     dataWithZeros.sliding(coeffs.length).map { window =>
       window.zip(coeffs.reverse).map { case (d, c) => d * BigDecimal(c) }.sum
     }
@@ -223,7 +238,8 @@ case class ExampleStaticFir(dataType: NumericType, coeffs: Seq[Double])
     yours.zip(golden).forall { case (y, g) => dataType.same(y, g, 1e-1, 1e-1) }
 
   override def testCases = {
-    val ret = Seq(10, 20, 30, 20, 10).map(i => TestCase(Seq.fill(i)(dataType.random)))
+    val ret =
+      Seq(10, 20, 30, 20, 10).map(i => TestCase(Seq.fill(i)(dataType.random)))
     ret
   }
 
@@ -232,21 +248,26 @@ case class ExampleStaticFir(dataType: NumericType, coeffs: Seq[Double])
   override def resetCycle = coeffs.length
 
   override def implH = new ChainsawInfiniteModule(this) {
-    val x = Mux(validIn, dataIn.head, dataType.fromConstant(0))
-    val xline = Seq.iterate(x.d(2), coeffs.length)(_.d(2))
+    val x        = Mux(validIn, dataIn.head, dataType.fromConstant(0))
+    val xline    = Seq.iterate(x.d(2), coeffs.length)(_.d(2))
     val preAdded = xline
-    val scaled = preAdded.zip(coeffs).map { case (port, coeff) => (port * dataType.fromConstant(coeff).d()).d() }
+    val scaled = preAdded.zip(coeffs).map { case (port, coeff) =>
+      (port * dataType.fromConstant(coeff).d()).d()
+    }
     val zero = productType.fromConstant(0.0)
     // the first element is a dummy, it is a must for extreme fmax, or PREG won't be used for the first DSP
-    val ret = (zero +: scaled).reduce((a, b) => (a +| b).d()) // addition without width growth
+    val ret = (zero +: scaled).reduce((a, b) =>
+      (a +| b).d()
+    ) // addition without width growth
     dataOut.head := ret.d()
+    lastOut      := lastIn.validAfter(latency())
   }
 
   override def implNaiveH = None
 
   override def name = "staticFir"
 
-  override def vivadoUtilEstimation = VivadoUtilEstimation(dsp = coeffs.length)
+  override def vivadoUtilEstimation = VivadoUtil(dsp = coeffs.length)
 
   override def fmaxEstimation = 600 MHz
 
@@ -256,7 +277,8 @@ case class ExampleStaticFir(dataType: NumericType, coeffs: Seq[Double])
 }
 
 case class ExampleDynamicFir(dataType: NumericType, tap: Int)
-  extends ChainsawDynamicInfiniteGenerator {
+    extends ChainsawDynamicInfiniteGenerator
+    with FixedLatency {
 
   override def impl(testCase: TestCase) = {
     val TestCase(data, coeffs) = testCase
@@ -272,34 +294,39 @@ case class ExampleDynamicFir(dataType: NumericType, tap: Int)
     yours.zip(golden).forall { case (y, g) => dataType.same(y, g, 1e-1, 1e-1) }
 
   override def testCases = {
-    val data = Seq(10, 20, 30, 20, 10).map(i => Seq.fill(i)(Random.nextDouble()).map(BigDecimal(_)))
+    val data = Seq(10, 20, 30, 20, 10).map(i =>
+      Seq.fill(i)(Random.nextDouble()).map(BigDecimal(_))
+    )
     data.map(TestCase(_, Seq.fill(tap)(Random.nextDouble()).map(BigDecimal(_))))
   }
 
   override def controlTypes = Seq.fill(tap)(dataType)
 
-  override def latency(control: Seq[BigDecimal]) = 2 * (tap + 1) + 1
+  override def latency() = 2 * (tap + 1) + 1
 
   override def resetCycle = 2 * (tap + 1) + 1
 
   override def implH = new ChainsawDynamicInfiniteModule(this) {
-    val x = Mux(validIn, dataIn.head, dataType.fromConstant(0))
-    val coeffs = RegNextWhen(controlIn, validIn.rise())
-    val xline = Seq.iterate(x.d(2), coeffs.length)(_.d(2))
+    val x        = Mux(validIn, dataIn.head, dataType.fromConstant(0))
+    val coeffs   = RegNextWhen(controlIn, validIn.rise())
+    val xline    = Seq.iterate(x.d(2), coeffs.length)(_.d(2))
     val preAdded = xline
-    val scaled = preAdded.zip(coeffs).map { case (port, coeff) => (port * coeff.d()).d() }
+    val scaled =
+      preAdded.zip(coeffs).map { case (port, coeff) => (port * coeff.d()).d() }
     val zero = productType.fromConstant(0.0)
     // the first element is a dummy, it is a must for extreme fmax, or PREG won't be used for the first DSP
-    val ret = (zero +: scaled).reduce((a, b) => (a +| b).d()) // addition without width growth
+    val ret = (zero +: scaled).reduce((a, b) =>
+      (a +| b).d()
+    ) // addition without width growth
     dataOut.head := ret.d()
-    validOut := validIn.validAfter(2 * (tap + 1) + 1)
+    lastOut      := lastIn.validAfter(latency())
   }
 
   override def implNaiveH = None
 
   override def name = "dynamicFir"
 
-  override def vivadoUtilEstimation = VivadoUtilEstimation(dsp = tap)
+  override def vivadoUtilEstimation = VivadoUtil(dsp = tap)
 
   override def fmaxEstimation = 600 MHz
 
@@ -308,11 +335,31 @@ case class ExampleDynamicFir(dataType: NumericType, tap: Int)
   override def outputTypes = Seq(productType)
 }
 
+// anytime you change the implementation of ChainsawGenerators/ChainsawTest, run this test for verification
 object TestGeneratorExamples extends App {
   ChainsawTest("testAdder", ExampleAdder(8))
   ChainsawTest("testAdder", ExampleAddSub(8), terminateAfter = 1000)
-  ChainsawTest("testFlip", ExampleStaticFlip(dataType = NumericType.U(8), length = 20), terminateAfter = 1000)
-  ChainsawTest("testFlip", ExampleDynamicFlip(dataType = NumericType.U(8), maxLength = 20), terminateAfter = 1000)
-  ChainsawTest("testFir", ExampleStaticFir(dataType = NumericType.SFix(4, 14), Seq.fill(5)(Random.nextDouble())), terminateAfter = 1000)
-  ChainsawTest("testFir", ExampleDynamicFir(dataType = NumericType.SFix(4, 14), 5), terminateAfter = 1000)
+  ChainsawTest(
+    "testFlip",
+    ExampleStaticFlip(dataType = NumericType.U(8), length = 20),
+    terminateAfter = 1000
+  )
+  ChainsawTest(
+    "testFlip",
+    ExampleDynamicFlip(dataType = NumericType.U(8), maxLength = 20),
+    terminateAfter = 1000
+  )
+  ChainsawTest(
+    "testFir",
+    ExampleStaticFir(
+      dataType = NumericType.SFix(4, 14),
+      Seq.fill(5)(Random.nextDouble())
+    ),
+    terminateAfter = 1000
+  )
+  ChainsawTest(
+    "testFir",
+    ExampleDynamicFir(dataType = NumericType.SFix(4, 14), 5),
+    terminateAfter = 1000
+  )
 }
