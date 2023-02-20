@@ -2,7 +2,7 @@ package R2Plus1D
 
 import spinal.core._
 import spinal.core.sim._
-import Chainsaw.xilinx._
+import Chainsaw._
 import scala.language.postfixOps
 
 class PingPongRegs2DTest extends org.scalatest.flatspec.AnyFlatSpec {

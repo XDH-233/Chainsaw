@@ -24,10 +24,10 @@ package object dsp {
     * --------
     */
 
-  def fir(data: Seq[Double], coeffs: Seq[Double]) =
-    matlabEngine
-      .feval("filter", coeffs.toArray, Array(1.0), data.toArray)
-      .asInstanceOf[Array[Double]]
+//  def fir(data: Seq[Double], coeffs: Seq[Double]) =
+//    matlabEngine
+//      .feval("filter", coeffs.toArray, Array(1.0), data.toArray)
+//      .asInstanceOf[Array[Double]]
 
   def conv(a: MatlabSignal, b: MatlabSignal): MatlabSignal = { // linear convolution
     val padded = Seq.fill(b.length - 1)(0.0) ++ a ++ Seq.fill(b.length - 1)(0.0)
@@ -48,12 +48,12 @@ package object dsp {
     * @param file
     *   filepath
     */
-  def getTimeSeries[T](file: File): T = {
-    logger.info(s"loading ${file.getAbsolutePath} ...")
-    matlabEngine.eval(s"ret = load('${file.getAbsolutePath}').ans.Data;")
-    matlabEngine.eval(s"ret = double(ret);")
-    matlabEngine.getVariable("ret").asInstanceOf[T]
-  }
+//  def getTimeSeries[T](file: File): T = {
+//    logger.info(s"loading ${file.getAbsolutePath} ...")
+//    matlabEngine.eval(s"ret = load('${file.getAbsolutePath}').ans.Data;")
+//    matlabEngine.eval(s"ret = double(ret);")
+//    matlabEngine.getVariable("ret").asInstanceOf[T]
+//  }
 
   /** -------- modeling Z domain
     * --------

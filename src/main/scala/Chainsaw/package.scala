@@ -56,7 +56,7 @@ package object Chainsaw {
   private val configs =
     yaml.load(configString).asInstanceOf[java.util.LinkedHashMap[String, Any]]
 
-  val hasVivado: Boolean  = sys.env.contains("VIVADO")
+  val hasVivado:  Boolean = sys.env.contains("VIVADO")
   val hasFlopoco: Boolean = sys.env.contains("FLOPOCO")
   val allowSynth: Boolean =
     configs.get("allowSynth").asInstanceOf[Boolean] && hasVivado
@@ -113,8 +113,8 @@ package object Chainsaw {
     new File("src/main/resources/unisims") // for Xilinx primitives
   val matlabScriptDir = new File("src/main/resources/matlabScripts")
 
-  val genWorkspace   = new File("genWorkspace")   // RTL
-  val simWorkspace   = new File("simWorkspace")   // waveform
+  val genWorkspace   = new File("genWorkspace") // RTL
+  val simWorkspace   = new File("simWorkspace") // waveform
   val synthWorkspace = new File("synthWorkspace") // log & checkpoint
 
   val flopocoOutputDir = new File("src/main/resources/flopocoGenerated")
@@ -241,7 +241,7 @@ package object Chainsaw {
 
   implicit class ChainsawFlowUtil(flow: ChainsawFlow) {
     def mapFragment(
-        func: Seq[AFix] => Seq[AFix],
+        func:    Seq[AFix] => Seq[AFix],
         latency: Int = 0
     ): ChainsawFlow = {
       val temp        = func(flow.fragment)
@@ -285,8 +285,8 @@ package object Chainsaw {
   }
 
   def ChainsawEdaFlow(
-      gen: ChainsawBaseGenerator,
-      edaFlowType: EdaFlowType,
+      gen:                 ChainsawBaseGenerator,
+      edaFlowType:         EdaFlowType,
       requirementStrategy: UtilRequirementStrategy
   ) = {
     atSimTime = false // set environment
@@ -304,12 +304,12 @@ package object Chainsaw {
   }
 
   def ChainsawSynth(
-      gen: ChainsawBaseGenerator,
+      gen:                 ChainsawBaseGenerator,
       requirementStrategy: UtilRequirementStrategy = DefaultRequirement
   ) = ChainsawEdaFlow(gen, SYNTH, requirementStrategy)
 
   def ChainsawImpl(
-      gen: ChainsawBaseGenerator,
+      gen:                 ChainsawBaseGenerator,
       requirementStrategy: UtilRequirementStrategy = DefaultRequirement
   ) = ChainsawEdaFlow(gen, IMPL, requirementStrategy)
 
@@ -344,8 +344,11 @@ package object Chainsaw {
     def toBigInt = BigInt(intz.toByteArray)
   }
 
-  /** -------- matlab utils
-    * --------
-    */
-  lazy val matlabEngine = MatlabEngine.startMatlab()
+//  /** -------- matlab utils
+//    * --------
+//    */
+//  lazy val matlabEngine = MatlabEngine.startMatlab()
+  def main(args: Array[String]): Unit = {
+    println("hello!")
+  }
 }

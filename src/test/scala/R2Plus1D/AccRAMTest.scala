@@ -4,6 +4,7 @@ import spinal.core.sim._
 import scala.language.postfixOps
 import Chainsaw.xilinx._
 import scala.util.Random.nextInt
+import Chainsaw._
 
 class AccRAMTest extends org.scalatest.flatspec.AnyFlatSpec {
   "accRam2D" should "use BRAM" in MyVivadoAction(AccRAM(uoc = 144, depth = 144), "acc_ram_2D", SYNTH)

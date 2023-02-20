@@ -3,8 +3,8 @@ package R2Plus1D
 import spinal.core._
 import spinal.core.sim._
 import scala.language.postfixOps
-import Chainsaw.xilinx._
 import scala.util.Random.nextInt
+import Chainsaw._
 
 class FeatureMapBufferTest extends org.scalatest.flatspec.AnyFlatSpec {
 

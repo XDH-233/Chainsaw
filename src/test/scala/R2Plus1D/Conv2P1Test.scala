@@ -4,12 +4,15 @@ import spinal.core.sim._
 
 import scala.language.postfixOps
 import Chainsaw.xilinx._
+import Chainsaw._
 import R2Plus1D.model.{Conv0D, Conv1D, Conv2D, ConvConfig, ConvType}
 import org.scalatest.flatspec.AnyFlatSpec
 
 class Conv2P1Test extends AnyFlatSpec {
 
   " conv2p1 " should "run in high frequency" in MyVivadoAction(Conv2P1(), "conv_2_plus_1", SYNTH)
+
+  "new test " should "run in high freq" in VivadoSynth(Conv2P1(), "conv_2_plus_1")
 
   val config2D: ConvConfig = ConvConfig(convType = ConvType.D2, Uic = 4, Nic = 5, Uoc = 16, Noc = 18, Nihw = 6, Nid = 4, stride = 1, K = 3, padding = 1)
   val config1D: ConvConfig =
@@ -50,16 +53,32 @@ class Conv2P1Test extends AnyFlatSpec {
   val ifMapMem0D:  Array[Array[Int]] = conv0D.ifMap2Mem(conv0D.randomIfMap)
   val weightMem0D: Array[Array[Int]] = conv0D.weight2Mem(conv0D.randomWeight)
 
-  "Block0, no 1*1*1" should "work right" in pattenSim(
+  "patten3: Block0 1*1*1" should "work right" in pattenSim(
+    addition         = false,
+    shorCut          = true,
+    load1DTo0DBuffer = false,
+    print2D          = false,
+    print1D          = false,
+    print0D          = true
+  )
+
+  "patten2: Block0, no 1*1*1" should "work right" in pattenSim(
     addition         = false,
     shorCut          = false,
     load1DTo0DBuffer = false,
     print2D          = false,
-    print1D          = false,
+    print1D          = true,
     print0D          = false
   )
 
-  "stem conv" should "work right " in pattenSim(addition = false, load1DTo0DBuffer = true, shorCut = false, print2D = false, print1D = true, print0D = false)
+  "patten1: stem conv" should "work right " in pattenSim(
+    addition         = false,
+    load1DTo0DBuffer = true,
+    shorCut          = false,
+    print2D          = false,
+    print1D          = true,
+    print0D          = false
+  )
 
   def pattenSim(shorCut: Boolean, addition: Boolean, load1DTo0DBuffer: Boolean, print2D: Boolean, print1D: Boolean, print0D: Boolean): Unit = {
     println("-" * 20 + "2D config" + "-" * 20)

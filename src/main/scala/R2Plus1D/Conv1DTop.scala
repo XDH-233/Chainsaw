@@ -80,10 +80,9 @@ case class Conv1DTop(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, dataWidth
   val weightOut: Seq[Vec[Bits]] = pingPongRegs1D.io.weightOut.toSeq.map(_.subdivideIn(dataWidth bits))
   PE1D.io.weight.zipWithIndex.foreach { case (p, i) => p := weightOut(i / uc)(i % uc).asSInt }
   // feature map write
-  featureMapBuffer.io.switch := False
-  featureMapBuffer.io.we     := loopCtrl1D.io.ofMapWriteEn
-  featureMapBuffer.io.wData  := accRAM1D.io.doutReLU
-  featureMapBuffer.io.wAddr  := loopCtrl1D.io.ofMapAddr
+  featureMapBuffer.io.we    := loopCtrl1D.io.ofMapWriteEn
+  featureMapBuffer.io.wData := accRAM1D.io.doutReLU
+  featureMapBuffer.io.wAddr := loopCtrl1D.io.ofMapAddr
 
   // feature map read
   featureMapBuffer.io.readEn2DPE.clear()

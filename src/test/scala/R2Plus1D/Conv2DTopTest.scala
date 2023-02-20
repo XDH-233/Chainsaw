@@ -2,8 +2,8 @@ package R2Plus1D
 import spinal.core._
 import spinal.core.sim._
 import scala.language.postfixOps
-import Chainsaw.xilinx._
 import R2Plus1D.model.ConvType
+import Chainsaw._
 
 class Conv2DTopTest extends org.scalatest.flatspec.AnyFlatSpec {
 

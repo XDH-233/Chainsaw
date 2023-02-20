@@ -31,9 +31,13 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
     val weight1DWriteEn:   Bool = in Bool ()
     val weight1DWriteAddr: UInt = in UInt (log2Up(Parameter.weightBuffer1DDepth) bits)
     val weight1DWriteData: Bits = in Bits (dataWidth * uc bits)
+
+    val buffer0DWe:    Bool = out Bool ()
+    val buffer0DWData: Bits = out Bits (dataWidth * uoc bits)
+    val buffer0DWAddr: UInt = out UInt (log2Up(featureMapDepth) bits)
+
   }
 
-  val relu:             Bool             = ~io.addition
   val shortCutReg:      Bool             = RegInit(False)
   val PE2D:             PE               = PE(uic = uic, uoc = uc, width = dataWidth)
   val weightBuffer2D:   WeightBuffer     = WeightBuffer(dataWidth = dataWidth, depth = weightBuffer2DDepth, uic = uic)
@@ -49,7 +53,8 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
   val accRAM1D:       AccRAM       = AccRAM(uoc = uoc, depth = Parameter.ofMapMaxOwOhSize1D, dataOutWidth = dataWidth, dataWidth = 28)
   val loopCtrl1D: LoopCtrl1D =
     LoopCtrl1D(uc = uc, uoc = uoc, readLatencyURAM = outputBuffer2D.readLatency, readLatencyBRAM = accRAM1D.readLatency, PELatency = PE1D.PELatency)
-  val pingPongRegs1D:      PingPongRegs1D      = PingPongRegs1D(dataWidth = dataWidth, uc = uc, uoc = uoc, readLatency = weightBuffer1D.readLatency)
+  val pingPongRegs1D: PingPongRegs1D =
+    PingPongRegs1D(dataWidth = dataWidth, uc = uc, uoc = uoc, fMap1DRdLatency = loopCtrl1D.fMapReadLatency, weightReadLatency = weightBuffer1D.readLatency)
   val outputBuffer0D:      OutputBuffer        = OutputBuffer(dataWidth = dataWidth, uc = uoc, pipeRegsCount = 4, depth = featureMapDepth)
   val elementWiseAddition: ElementWiseAddition = ElementWiseAddition(dataWidth = dataWidth, uoc = uoc, depth = Parameter.featureMapDepth)
 
@@ -222,4 +227,8 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
   elementWiseAddition.io.ofMapAddr := loopCtrl1D.io.ofMapAddr
   Function.vecZip(elementWiseAddition.io.accRAMDout, accRAM1D.io.douts)
   elementWiseAddition.io.buffer0DRData := outputBuffer0D.io.rData
+
+  io.buffer0DWe    := elementWiseAddition.io.buffer0DWe
+  io.buffer0DWData := elementWiseAddition.io.buffer0DWData
+  io.buffer0DWAddr := elementWiseAddition.io.buffer0DWAddr
 }

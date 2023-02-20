@@ -3,7 +3,7 @@ import spinal.core._
 import spinal.core.sim._
 
 import scala.language.postfixOps
-import Chainsaw.xilinx._
+import Chainsaw._
 
 import scala.collection.mutable
 

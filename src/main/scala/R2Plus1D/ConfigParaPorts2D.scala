@@ -16,7 +16,7 @@ case class ConfigParaPorts2D() extends Bundle {
   val ifMapSize:              UInt = UInt(log2Up(ifMapSizeMax2D) bits)
   val ofMapSize:              UInt = UInt(log2Up(Parameter.ofMapSizeMax2D + 1) bits)
   val stride:                 Bool = Bool() // 0 -> 1, 1 -> 2
-  val padding:                UInt = UInt(3 bits)
+  val padding:                Bool = Bool() // 0 -> 1, 1 -> 3
 
   def assignConfig(config: model.ConvConfig): Unit = {
     Nic         #= config.Nic
@@ -31,7 +31,7 @@ case class ConfigParaPorts2D() extends Bundle {
     NcDUcCeil   #= config.NocDUocCeil
     NicDUicCeil #= config.NicDUicCeil
     stride      #= config.stride > 1
-    padding     #= config.padding
+    padding     #= config.padding > 1
     ofMapSize   #= config.ofMapSize
     Nd          #= config.Nid
   }

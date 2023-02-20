@@ -61,3 +61,4 @@ project/metals.sbt
 # macOS file system
 *DS_Store
 *.html
+*.jou

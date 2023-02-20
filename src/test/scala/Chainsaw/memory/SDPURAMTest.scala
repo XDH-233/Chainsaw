@@ -1,6 +1,7 @@
 package Chainsaw.memory
 import spinal.core._
 import R2Plus1D._
+import Chainsaw._
 import Chainsaw.xilinx._
 import spinal.core._
 import spinal.core.sim._

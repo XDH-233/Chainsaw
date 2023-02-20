@@ -5,7 +5,8 @@ import spinal.lib.fsm._
 import scala.language.postfixOps
 import Chainsaw._
 
-case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, readLatency: Int = 5) extends Component {
+case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, fMap1DRdLatency: Int = 6, weightReadLatency: Int = 5)
+    extends Component {
   val io = new Bundle {
     val weightRdy:         Bool      = in Bool ()
     val loadConfig:        Bool      = in Bool ()
@@ -33,7 +34,7 @@ case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int =
   }
   val ping, pong:  Vec[Bits]      = Vec(Reg(Bits(dataWidth * uc bits)), uoc)
   val fillPing:    Bool           = RegInit(False)
-  val load:        Bool           = io.readEn.d(readLatency)
+  val load:        Bool           = io.readEn.d(weightReadLatency)
   val readCounter: GeneralCounter = GeneralCounter(step = U(1), top = io.ofMapSize2D, en = io.loadConfig)
 
   Function.pingPongLoadAndOut(ping, pong, io.weightIn, io.weightOut, fillPing, load)
@@ -92,7 +93,7 @@ case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int =
         io.readEn.set()
       }
 
-      when(readCounter.value + 1 === readLatency) {
+      when(readCounter.value + 1 === fMap1DRdLatency) {
         fillPing := ~fillPing
       }
 
@@ -112,7 +113,7 @@ case class PingPongRegs1D(dataWidth: Int = 8, uc: Int = Parameter.Uc, uoc: Int =
       } elsewhen (readCounter.willOverFlow) {
         io.readEn.set()
       }
-      when(readCounter.value + 1 === readLatency) {
+      when(readCounter.value + 1 === fMap1DRdLatency) {
         fillPing := ~fillPing
       }
       when(readCounter.willOverFlow) {

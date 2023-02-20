@@ -14,13 +14,13 @@ import scala.util.{Failure, Success, Try}
 /** used to generate sources for a Vivado flow and invoke Vivado to run it
   */
 class VivadoFlow[T <: Component](
-    design: => T,
-    taskType: EdaFlowType,
-    xilinxDevice: XilinxDevice,
-    topModuleName: String,
-    workspaceDir: File,
-    xdcFile: Option[File]                  = None,
-    netlistDir: Option[File]               = None,
+    design:           => T,
+    taskType:         EdaFlowType,
+    xilinxDevice:     XilinxDevice,
+    topModuleName:    String,
+    workspaceDir:     File,
+    xdcFile:          Option[File]         = None,
+    netlistDir:       Option[File]         = None,
     customizedConfig: Option[SpinalConfig] = None
 ) {
 
@@ -148,7 +148,7 @@ class VivadoFlow[T <: Component](
 
     // do flow
     def addSynth(): Unit = {
-      //      script += s"synth_design -part ${xilinxDevice.part} -top $topModuleName -mode out_of_context -retiming\n"
+      script += s"synth_design -part ${xilinxDevice.part} -top $topModuleName -mode out_of_context -retiming\n"
       script += s"synth_design -part ${xilinxDevice.part} -top $topModuleName -mode out_of_context\n"
       script += s"write_checkpoint -force ${topModuleName}_after_synth.dcp\n"
       script += s"report_timing\n"
@@ -186,12 +186,12 @@ class VivadoFlow[T <: Component](
 
 object VivadoFlow {
   def apply[T <: Module](
-      design: => T,
-      taskType: EdaFlowType,
-      xilinxDevice: XilinxDevice,
+      design:        => T,
+      taskType:      EdaFlowType,
+      xilinxDevice:  XilinxDevice,
       topModuleName: String,
       workspacePath: File,
-      xdcFile: Option[File]
+      xdcFile:       Option[File]
   ): VivadoFlow[T] =
     new VivadoFlow(
       design,
@@ -205,11 +205,11 @@ object VivadoFlow {
 
 object DefaultVivadoFlow {
   def general[T <: Module](
-      design: => T,
-      name: String,
-      flowType: EdaFlowType,
+      design:      => T,
+      name:        String,
+      flowType:    EdaFlowType,
       netlistFile: Option[File],
-      config: Option[SpinalConfig]
+      config:      Option[SpinalConfig]
   ) = {
     val flow = new VivadoFlow(
       design,

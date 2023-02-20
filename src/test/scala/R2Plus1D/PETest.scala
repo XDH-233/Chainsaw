@@ -3,7 +3,7 @@ package R2Plus1D
 import org.scalatest.flatspec.AnyFlatSpec
 import spinal.core._
 import spinal.core.sim._
-import Chainsaw.xilinx._
+import Chainsaw._
 
 import scala.language.postfixOps
 import scala.util.Random.nextInt
