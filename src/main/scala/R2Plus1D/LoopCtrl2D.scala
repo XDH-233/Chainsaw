@@ -118,7 +118,14 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
   when(tiWeightAddr.willOverFlow & th.willOverFlowIfInc & tw.willOverFlowIfInc) {
     toWeightAddr.inc()
   }
-  io.weightAddrBase := Function.CounterSum(ksWeightAddr, krWeightAddr, tiWeightAddr, toWeightAddr).resized
+  io.weightAddrBase := RegNextWhen(
+    Vec(ksWeightAddr.valueNext, krWeightAddr.valueNext, tiWeightAddr.valueNext, toWeightAddr.valueNext)
+      .reduceBalancedTree(_ + _)
+      .resize(log2Up(Parameter.weightBuffer2DDepth)),
+    ksWeightAddr.willInc
+  ) init (0)
+
+//  io.weightAddrBase := Function.CounterSum(ksWeightAddr, krWeightAddr, tiWeightAddr, toWeightAddr).resized
   // weightLoadedNum
   when(io.loadConfig) {
     when(io.config.Nc >= uc) {

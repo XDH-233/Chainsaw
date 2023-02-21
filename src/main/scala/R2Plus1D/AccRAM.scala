@@ -24,5 +24,5 @@ case class AccRAM(uoc: Int = Parameter.Uc, dataWidth: Int = 26, pipeRegCount: In
   import Function.SIntExtension
   val sumsReLU: Seq[SInt] = sums.map(s => s.relu(dataOutWidth))
   io.doutReLU := Mux(io.doutEn.d(pipeRegCount), sumsReLU.map(_.asBits).reverse.reduce(_ ## _), B(0))
-  Function.vecZip(io.douts, Vec(sums))
+  io.douts    := sums
 }

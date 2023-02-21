@@ -2,6 +2,7 @@ package R2Plus1D
 import spinal.core._
 import scala.language.postfixOps
 import Chainsaw._
+import spinal.lib._
 
 object Function {
   def shiftLoad(p: Vec[Bits], w: Bits, en: Bool): Unit = {
@@ -11,22 +12,18 @@ object Function {
     }
   }
 
-  def vecZip[T <: Data](a: Vec[T], b: Vec[T]): Unit = {
-    a.zip(b).foreach { case (p, q) => p := q }
-  }
-
   def pingPongLoadAndOut(ping: Vec[Bits], pong: Vec[Bits], wIn: Bits, wOut: Vec[Bits], state: Bool, en: Bool): Unit = {
     when(state) {
       shiftLoad(ping, wIn, en)
-      vecZip(wOut, pong)
+      wOut := pong
     } otherwise {
       shiftLoad(pong, wIn, en)
-      vecZip(wOut, ping)
+      wOut := ping
     }
   }
 
   def CounterSum(g: GeneralCounter*): UInt = {
-    g.map(_.value).reduce(_ + _)
+    Vec(g.map(_.value)).reduceBalancedTree(_ + _)
   }
 
   implicit class SIntExtension(s: SInt) {

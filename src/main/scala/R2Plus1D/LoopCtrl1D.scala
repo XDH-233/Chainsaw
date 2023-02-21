@@ -111,7 +111,7 @@ case class LoopCtrl1D(
   when(tiWeightAddr.willOverFlow & od.willOverFlowIfInc) {
     toWeightAddr.inc()
   }
-  io.weightAddrBase := (ktWeightAddr.value + tiWeightAddr.value + toWeightAddr.value).resized
+  io.weightAddrBase := Function.CounterSum(ktWeightAddr, tiWeightAddr, toWeightAddr).resized
   when(io.loadConfig) {
     when(io.config.Noc >= uoc) {
       io.weightLoadedNum := U(uoc)

@@ -26,6 +26,6 @@ case class OutputBuffer(dataWidth: Int = 8, uc: Int = Parameter.Uc, pipeRegsCoun
   ram.io.dina   := io.wData
   val rData: Bits = Bits(dataWidth * uc bits)
 
-  rData := Mux(io.rAddrVld.d(pipeRegsCount + 1), ram.io.doutb, B(0))
-  Function.vecZip(io.rData, rData.subdivideIn(dataWidth bits))
+  rData    := Mux(io.rAddrVld.d(pipeRegsCount + 1), ram.io.doutb, B(0))
+  io.rData := rData.subdivideIn(dataWidth bits)
 }

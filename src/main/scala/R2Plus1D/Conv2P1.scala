@@ -222,10 +222,10 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
   outputBuffer0D.io.rAddrVld.clear()
 
   // element-wise addition
-  elementWiseAddition.io.enable    := io.addition
-  elementWiseAddition.io.ofMapWe1D := loopCtrl1D.io.ofMapWriteEn
-  elementWiseAddition.io.ofMapAddr := loopCtrl1D.io.ofMapAddr
-  Function.vecZip(elementWiseAddition.io.accRAMDout, accRAM1D.io.douts)
+  elementWiseAddition.io.enable        := io.addition
+  elementWiseAddition.io.ofMapWe1D     := loopCtrl1D.io.ofMapWriteEn
+  elementWiseAddition.io.ofMapAddr     := loopCtrl1D.io.ofMapAddr
+  elementWiseAddition.io.accRAMDout    := accRAM1D.io.douts
   elementWiseAddition.io.buffer0DRData := outputBuffer0D.io.rData
 
   io.buffer0DWe    := elementWiseAddition.io.buffer0DWe
