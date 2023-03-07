@@ -14,7 +14,7 @@ class Conv2P1Test extends AnyFlatSpec {
 
   "new test " should "run in high freq" in VivadoSynth(Conv2P1(), "conv_2_plus_1")
 
-  val config2D: ConvConfig = ConvConfig(convType = ConvType.D2, Uic = 4, Nic = 5, Uoc = 16, Noc = 18, Nihw = 6, Nid = 4, stride = 1, K = 3, padding = 1)
+  val config2D: ConvConfig = ConvConfig(Uic = 4, Uoc = 8, Nic = 9, Tc = 16, Noc = 18, Nid = 2, Nihw = 2, K = 2, stride = 1, padding = 1, convType = ConvType.D2)
   val config1D: ConvConfig =
     ConvConfig(
       convType = ConvType.D1,
@@ -41,13 +41,13 @@ class Conv2P1Test extends AnyFlatSpec {
     stride   = 2,
     padding  = 0
   )
-  val conv2D:      Conv2D            = model.Conv2D(config2D)
-  val ifMapMem2D:  Array[Array[Int]] = conv2D.ifMap2Mem(conv2D.randIfMap())
-  val weightMem2D: Array[Array[Int]] = conv2D.weight2Mem(conv2D.randWeight())
+  val conv2D:      Conv2D                   = model.Conv2D(config2D)
+  val ifMapMem2D:  Array[Array[Int]]        = conv2D.ifMap2Mem(conv2D.randIfMap())
+  val weightMem2D: Array[Array[Array[Int]]] = conv2D.weight2Mem(conv2D.randWeight())
 
-  val conv1D:      Conv1D            = model.Conv1D(config1D)
-  val ifMapMem1D:  Array[Array[Int]] = conv1D.ifMap2Tile(conv1D.randomIfMap)
-  val weightMem1D: Array[Array[Int]] = conv1D.weight2Tile(conv1D.randomWeight)
+  val conv1D:      Conv1D                   = model.Conv1D(config1D)
+  val ifMapMem1D:  Array[Array[Int]]        = conv1D.ifMap2Mem(conv1D.randomIfMap)
+  val weightMem1D: Array[Array[Array[Int]]] = conv1D.weight2Mem(conv1D.randomWeight)
 
   val conv0D:      Conv0D            = model.Conv0D(config0D)
   val ifMapMem0D:  Array[Array[Int]] = conv0D.ifMap2Mem(conv0D.randomIfMap)
@@ -75,8 +75,8 @@ class Conv2P1Test extends AnyFlatSpec {
     addition         = false,
     load1DTo0DBuffer = true,
     shorCut          = false,
-    print2D          = false,
-    print1D          = true,
+    print2D          = true,
+    print1D          = false,
     print0D          = false
   )
 
@@ -88,8 +88,8 @@ class Conv2P1Test extends AnyFlatSpec {
     println("-" * 20 + "1D config" + "-" * 20)
     config1D.display()
     conv2D.loopUnroll(ifMapMem2D, weightMem2D, print2D)
-    conv1D.loopUnroll(ifMapMem1D, weightMem1D, print1D)
-    conv0D.loopUnroll(ifMapMem0D, weightMem0D, print0D)
+//    conv1D.loopUnroll(ifMapMem1D, weightMem1D, print1D)
+//    conv0D.loopUnroll(ifMapMem0D, weightMem0D, print0D)
 
     SimConfig.withFstWave
       .withConfig(

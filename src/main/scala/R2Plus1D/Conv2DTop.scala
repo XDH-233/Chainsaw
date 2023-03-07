@@ -6,7 +6,7 @@ import spinal.lib._
 
 import scala.language.postfixOps
 
-case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc) extends Component {
+case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc, tc: Int = 144) extends Component {
   // 这个模块不写逻辑，只连线，逻辑写在各自的模块中
   val io = new Bundle {
     val weightSwitch:    Bool = in Bool ()

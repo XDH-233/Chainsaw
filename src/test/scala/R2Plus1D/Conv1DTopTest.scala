@@ -57,7 +57,7 @@ class Conv1DTopTest extends org.scalatest.flatspec.AnyFlatSpec {
     val conv1D = model.Conv1D(config)
     val ifMap  = conv1D.randomIfMap
     val weight = conv1D.randomWeight
-    conv1D.loopUnroll(conv1D.ifMap2Tile(ifMap), conv1D.weight2Tile(weight))
+    conv1D.loopUnroll(conv1D.ifMap2Mem(ifMap), conv1D.weight2Mem(weight))
     // ----------------------- simulation -------------------------------------------------------------------------------
     SimConfig.withFstWave
       .withConfig(

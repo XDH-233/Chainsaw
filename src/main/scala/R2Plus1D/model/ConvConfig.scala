@@ -10,6 +10,7 @@ case class ConvConfig(
     val Uoc:      Int            = 26,
     val Noc:      Int            = 512,
     val Nid:      Int            = 16,
+    val Tc:       Int            = 144,
     val Nihw:     Int            = 112,
     val K:        Int            = 3,
     val stride:   Int            = 1,
@@ -29,7 +30,11 @@ case class ConvConfig(
   }
 
   val Tow: Int = sqrt(Uoc / Nod).floor.toInt
-  val Toh: Int = (Uoc / Nod) / Tow
+  val Toh: Int = convType match {
+    case ConvType.D2 =>
+      (Uoc / Nod) / Tow
+    case _ => 1
+  }
 
   val ifMapSize: Int = Nihw * Nihw * Nid
   val ofMapSize: Int = Nod * Nohw * Nohw
@@ -38,9 +43,14 @@ case class ConvConfig(
     case ConvType.D1 => K
     case ConvType.D2 => K * K
   }
-
+  // 2D
   val NicDUicCeil: Int = (Nic.toDouble / Uic.toDouble).ceil.toInt
+  val TcDUocCeil:  Int = (Tc.toDouble / Uoc.toDouble).ceil.toInt
+  val NocDTcCeil:  Int = (Noc.toDouble / Tc.toDouble).ceil.toInt
 
+// 1D
+  val TcDUicCeil:  Int = (Tc.toDouble / Uic.toDouble).ceil.toInt
+  val NicDTcCeil:  Int = (Nic.toDouble / Tc.toDouble).ceil.toInt
   val NocDUocCeil: Int = (Noc.toDouble / Uoc.toDouble).ceil.toInt
 
   val NohwDTohCeil: Int = (Nohw.toDouble / Toh.toDouble).ceil.toInt
@@ -51,15 +61,16 @@ case class ConvConfig(
     convType match {
       case ConvType.D0 => {
         printf(f"Uic: $Uic%-4d Nic: $Nic%-4d Uoc: $Uoc%-4d Noc: $Noc%-4d\n")
-        printf(f"NicDUicCeil: $NicDUicCeil%-4d NocDUocCeil: $NocDUocCeil%-4d\n")
+        printf(f"NicDUicCeil: $NicDUicCeil%-4d NocDTcCeil: $NocDTcCeil%-4d TcDUocCeil: $TcDUocCeil%-4d\n")
       }
       case ConvType.D1 => {
-        printf(f"Uc: $Uic%-4d Nc: $Nic%-4d Uoc: $Uoc%-4d Noc: $Noc%-4d\n")
-        printf(f"NcDUcCeil: $NicDUicCeil%-4d NocDUocCeil: $NocDUocCeil%-4d\n")
+        printf(f"Uic: $Uic%-4d Nic:  $Nic%-4d Tc: $Tc%-4d Uoc: $Uoc%-4d Noc: $Noc%-4d\n")
+        printf(f"NicDTcCeil: $NicDTcCeil%-4d TcDUicCeil: $TcDUicCeil%-4d NocDUocCeil: $NocDUocCeil%-4d\n")
       }
       case ConvType.D2 => {
-        printf(f"Uic: $Uic%-4d Nic: $Nic%-4d Uc: $Uoc%-4d Nc: $Noc%-4d\n")
+        printf(f"Uic: $Uic%-4d Nic: $Nic%-4d Uc: $Uoc%-4d Tc: $Tc%-4d Nc: $Noc%-4d\n")
         printf(f"Tow: $Tow%-4d Toh: $Toh%-4d NohwDTohCeil $NohwDTohCeil%-4d NohwDTowCeil: $NohwDTowCeil%-4d\n")
+        printf(f"NicDUicCeil: $NicDUicCeil%-4d NocDTcCeil: $NocDTcCeil%-4d TcDUocCeil: $TcDUocCeil%-4d\n")
       }
     }
     printf(f"Nid: $Nid%-4d Nod: $Nod%-4d Nihw: $Nihw%-4d Nohw :$Nohw%-4d\n")

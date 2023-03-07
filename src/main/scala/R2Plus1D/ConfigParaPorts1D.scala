@@ -28,7 +28,7 @@ case class ConfigParaPorts1D() extends Bundle {
     Nc            #= c.Nic
     Noc           #= c.Noc
     NcDUcCeil     #= c.NicDUicCeil
-    NocDUocCeil   #= c.NocDUocCeil
+    NocDUocCeil   #= c.TcDUocCeil
     stride        #= c.stride > 1
     padding       #= c.padding
     ifMapSize     #= c.ifMapSize

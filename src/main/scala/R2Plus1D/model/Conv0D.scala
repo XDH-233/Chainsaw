@@ -16,7 +16,7 @@ case class Conv0D(config: ConvConfig) {
   }
 
   def weight2Mem(weight: Array[Array[Int]]): Array[Array[Int]] = {
-    val mem = Array.fill(NicDUicCeil * NocDUocCeil * Uoc)(Array.fill(Uic)(0))
+    val mem = Array.fill(NicDUicCeil * TcDUocCeil * Uoc)(Array.fill(Uic)(0))
     for (oc <- 0 until Noc; ic <- 0 until Nic) {
       mem((oc / Uoc) * NicDUicCeil * Uoc + (ic / Uic) * Uoc + oc % Uoc)(ic % Uic) = weight(oc)(ic)
     }
@@ -24,7 +24,7 @@ case class Conv0D(config: ConvConfig) {
   }
 
   def ofMap2Mem(ofMap: Array[Array[Array[Array[Int]]]]): Array[Array[Int]] = {
-    val mem = Array.fill(NocDUocCeil * ofMapSize)(Array.fill(Uoc)(0))
+    val mem = Array.fill(TcDUocCeil * ofMapSize)(Array.fill(Uoc)(0))
     for (oc <- 0 until Noc; oh <- 0 until Nohw; ow <- 0 until Nohw; od <- 0 until Nod) {
       mem((oc / Uoc) * ofMapSize + oh * Nohw * Nod + ow * Nod + od)(oc % Uoc) = ofMap(oc)(oh)(ow)(od)
     }
@@ -43,8 +43,8 @@ case class Conv0D(config: ConvConfig) {
   }
 
   def loopUnroll(ifMapMem: Array[Array[Int]], weightMem: Array[Array[Int]], printProcession: Boolean = true): Array[Array[Int]] = {
-    val ofMapMem = Array.fill(Nohw * Nohw * Nod * NocDUocCeil)(Array.fill(Uoc)(0))
-    for (to <- 0 until NocDUocCeil) {
+    val ofMapMem = Array.fill(Nohw * Nohw * Nod * TcDUocCeil)(Array.fill(Uoc)(0))
+    for (to <- 0 until TcDUocCeil) {
       for (od <- 0 until Nod) {
         for (ti <- 0 until NicDUicCeil) {
           val weightAddrHead = to * NicDUicCeil * Uoc + ti * Uoc
