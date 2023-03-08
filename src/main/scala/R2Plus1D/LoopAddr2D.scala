@@ -18,23 +18,22 @@ case class LoopAddr2D(uc: Int = Parameter.Uc) extends Component {
     val NicDUicCeiTKSizeTUc:           UInt = out(RegNext(configReg.NicDUicCeil * kSizeTUc))
     val NcDUcCeilTNicDUicCeiTKSizeTUc: UInt = out(RegNext(configReg.TcDUcCeil * NicDUicCeiTKSizeTUc))
 
-    val NdTTow:  UInt = out(RegNext(configReg.Nd * configReg.Tow))
-    val NihwTNd: UInt = out(RegNext(configReg.Nihw * configReg.Nd))
-    val TohTNihwTNd  = out(RegNext(configReg.Toh * NihwTNd))
-    val NohwTNihwTNd = out(RegNext(configReg.Nohw * NihwTNd))
+    val NdTTow:                UInt = out(RegNext(configReg.Nd * configReg.Tow))
+    val NihwTNd:               UInt = out(RegNext(configReg.Nihw * configReg.Nd))
+    val TohTNihwTNd:           UInt = out(RegNext(configReg.Toh * NihwTNd))
+    val NohwTNihwTNd:          UInt = out(RegNext(configReg.Nohw * NihwTNd))
     val NihwTNdTTow:           UInt = out(RegNext(configReg.Tow * NihwTNd))
     val NdTKrs:                UInt = out(RegNext(configReg.Nd * configReg.Krs))
     val NihwTNdTKrs:           UInt = out(RegNext(configReg.Nihw * NdTKrs))
     val NihwTNdTToh:           UInt = out(RegNext(configReg.Toh * NihwTNd))
     val ifMapSizeTNicDUicCeil: UInt = out(RegNext(configReg.ifMapSize * configReg.NicDUicCeil))
 
-    val NohwTNd:            UInt = out(RegNext(configReg.Nohw * configReg.Nd))
-    val TohTNohwTNd:        UInt = out(RegNext(configReg.Toh * NohwTNd))
-    val NohwTNohwTNd:       UInt = out(RegNext(configReg.Nohw * NohwTNd))
-    val ofMapSizeTcDUcCeil: UInt = out(RegNext(configReg.ofMapSize * configReg.TcDUcCeil))
-    val NcDTcofMapSizeTcDUcCeil = out(RegNext(configReg.NcDTcCeil * ofMapSizeTcDUcCeil))
+    val NohwTNd:                 UInt = out(RegNext(configReg.Nohw * configReg.Nd))
+    val TohTNohwTNd:             UInt = out(RegNext(configReg.Toh * NohwTNd))
+    val ofMapSizeTcDUcCeil:      UInt = out(RegNext(configReg.ofMapSize * configReg.TcDUcCeil))
+    val NcDTcofMapSizeTcDUcCeil: UInt = out(RegNext(configReg.NcDTcCeil * ofMapSizeTcDUcCeil))
   }
-  io.loadCounter := io.loadConfig.d(4)
+  io.loadCounter := io.loadConfig.d(loadLatency)
   io.configReg.assignAllByName(RegNextWhen(io.configIn, io.loadConfig))
 
 }

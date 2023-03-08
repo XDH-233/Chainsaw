@@ -52,7 +52,7 @@ case class Conv2P1(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, uoc: Int = 
   val PE1D:           PE           = PE(uic = uc, uoc = uoc, width = dataWidth)
   val accRAM1D:       AccRAM       = AccRAM(uoc = uoc, depth = Parameter.ofMapMaxOwOhSize1D, dataOutWidth = dataWidth, dataWidth = 28)
   val loopCtrl1D: LoopCtrl1D =
-    LoopCtrl1D(uc = uc, uoc = uoc, readLatencyURAM = outputBuffer2D.readLatency, readLatencyBRAM = accRAM1D.readLatency, PELatency = PE1D.PELatency)
+    LoopCtrl1D(uoc = uoc, readLatencyURAM = outputBuffer2D.readLatency, readLatencyBRAM = accRAM1D.readLatency, PELatency = PE1D.PELatency)
   val pingPongRegs1D: PingPongRegs1D =
     PingPongRegs1D(dataWidth = dataWidth, uc = uc, uoc = uoc, fMap1DRdLatency = loopCtrl1D.fMapReadLatency, weightReadLatency = weightBuffer1D.readLatency)
   val outputBuffer0D:      OutputBuffer        = OutputBuffer(dataWidth = dataWidth, uc = uoc, pipeRegsCount = 4, depth = featureMapDepth)

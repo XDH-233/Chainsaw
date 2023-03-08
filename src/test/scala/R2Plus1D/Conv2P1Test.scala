@@ -12,8 +12,6 @@ class Conv2P1Test extends AnyFlatSpec {
 
   " conv2p1 " should "run in high frequency" in MyVivadoAction(Conv2P1(), "conv_2_plus_1", SYNTH)
 
-  "new test " should "run in high freq" in VivadoSynth(Conv2P1(), "conv_2_plus_1")
-
   val config2D: ConvConfig = ConvConfig(Uic = 4, Uoc = 8, Nic = 9, Tc = 16, Noc = 18, Nid = 2, Nihw = 2, K = 2, stride = 1, padding = 1, convType = ConvType.D2)
   val config1D: ConvConfig =
     ConvConfig(
@@ -21,9 +19,10 @@ class Conv2P1Test extends AnyFlatSpec {
       Uic      = config2D.Uoc,
       Nic      = config2D.Noc,
       Uoc      = config2D.Uic,
-      Noc      = 5,
+      Noc      = 18,
       Nihw     = config2D.Nohw,
       Nid      = config2D.Nod,
+      Tc       = 8,
       K        = 3,
       stride   = 2,
       padding  = 1
@@ -75,8 +74,8 @@ class Conv2P1Test extends AnyFlatSpec {
     addition         = false,
     load1DTo0DBuffer = true,
     shorCut          = false,
-    print2D          = true,
-    print1D          = false,
+    print2D          = false,
+    print1D          = true,
     print0D          = false
   )
 
@@ -88,7 +87,7 @@ class Conv2P1Test extends AnyFlatSpec {
     println("-" * 20 + "1D config" + "-" * 20)
     config1D.display()
     conv2D.loopUnroll(ifMapMem2D, weightMem2D, print2D)
-//    conv1D.loopUnroll(ifMapMem1D, weightMem1D, print1D)
+    conv1D.loopUnroll(ifMapMem1D, weightMem1D, print1D)
 //    conv0D.loopUnroll(ifMapMem0D, weightMem0D, print0D)
 
     SimConfig.withFstWave
@@ -100,11 +99,27 @@ class Conv2P1Test extends AnyFlatSpec {
       )
       .compile {
         val dut = Conv2P1(uic = config2D.Uic, uc = config2D.Uoc, uoc = config1D.Uoc)
+        dut.loopCtrl2D.io.ifMapAddr.simPublic()
+        dut.loopCtrl2D.io.ofMapAddr.simPublic()
+        dut.loopCtrl2D.io.weightAddrBase.simPublic()
+        dut.loopCtrl2D.tc.value.simPublic()
+        dut.loopCtrl2D.to.value.simPublic()
+        dut.loopCtrl2D.th.value.simPublic()
+        dut.loopCtrl2D.tw.value.simPublic()
+        dut.loopCtrl2D.ti.value.simPublic()
+        dut.loopCtrl2D.kr.value.simPublic()
+        dut.loopCtrl2D.ks.value.simPublic()
+        dut.loopCtrl2D.sth.value.simPublic()
+        dut.loopCtrl2D.stw.value.simPublic()
+        dut.loopCtrl2D.od.value.simPublic()
+        dut.loopCtrl2D.io.ifMapRdEn.simPublic()
+        dut.loopCtrl2D.io.layerDone.simPublic()
         dut
       }
       .doSim { dut =>
         println(dut.PE1D.PELatency)
         import dut._
+        import dut.loopCtrl2D.{tc, to, th, tw, ti, kr, ks, sth, stw, od}
         dut.clockDomain.forkStimulus(10)
         io.config2D.assignConfig(config2D)
         io.config1D.assignConfig(config1D)
@@ -123,7 +138,27 @@ class Conv2P1Test extends AnyFlatSpec {
         io.fMapDDRLoadDone #= true
         clockDomain.waitSampling()
         io.newConv #= false
-        clockDomain.waitSampling(10000)
+
+        (0 until 1500).foreach { _ =>
+          clockDomain.waitSampling()
+          val loop = model.Loop(
+            tc.value.toBigInt,
+            to.value.toBigInt,
+            th.value.toBigInt,
+            tw.value.toBigInt,
+            ti.value.toBigInt,
+            kr.value.toBigInt,
+            ks.value.toBigInt,
+            sth.value.toBigInt,
+            stw.value.toBigInt,
+            od.value.toBigInt
+          )
+          if (loopCtrl2D.io.ifMapRdEn.toBoolean & !loopCtrl2D.io.layerDone.toBoolean) {
+            val addrAndIndex = conv2D.loopAndAddr(loop)
+            assert(loopCtrl2D.io.ifMapAddr.toInt == addrAndIndex.ifAddr)
+
+          }
+        }
       }
   }
 

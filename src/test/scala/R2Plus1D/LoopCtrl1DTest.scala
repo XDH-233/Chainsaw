@@ -26,7 +26,7 @@ class LoopCtrl1DTest extends org.scalatest.flatspec.AnyFlatSpec {
         )
       )
       .compile {
-        val dut = LoopCtrl1D(uc = config.Uic, uoc = config.Uoc, readLatencyURAM = 4, readLatencyBRAM = 2, PELatency = 3)
+        val dut = LoopCtrl1D(uoc = config.Uoc, readLatencyURAM = 4, readLatencyBRAM = 2, PELatency = 3)
         dut
       }
       .doSim { dut =>

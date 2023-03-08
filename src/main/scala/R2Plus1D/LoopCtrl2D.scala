@@ -221,7 +221,7 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
     GeneralCounter(step = loopAddr2D.io.NohwTNd, top = loopAddr2D.io.TohTNohwTNd, en = loopAddr2D.io.loadCounter)
   val twOfMapAddr: GeneralCounter = GeneralCounter(step = loopAddr2D.io.NdTTow, top = loopAddr2D.io.NohwTNd, en = loopAddr2D.io.loadCounter)
   val thOfMapAddr: GeneralCounter =
-    GeneralCounter(step = loopAddr2D.io.TohTNohwTNd, top = loopAddr2D.io.NohwTNohwTNd, en = loopAddr2D.io.loadCounter)
+    GeneralCounter(step = loopAddr2D.io.TohTNohwTNd, top = loopAddr2D.io.configReg.ofMapSize, en = loopAddr2D.io.loadCounter)
   val toOfMapAddr: GeneralCounter = GeneralCounter(step = io.config.ofMapSize, top = loopAddr2D.io.ofMapSizeTcDUcCeil, en = loopAddr2D.io.loadCounter)
   val tcOfMapAddr: GeneralCounter =
     GeneralCounter(step = loopAddr2D.io.ofMapSizeTcDUcCeil, top = loopAddr2D.io.NcDTcofMapSizeTcDUcCeil, en = loopAddr2D.io.loadCounter)

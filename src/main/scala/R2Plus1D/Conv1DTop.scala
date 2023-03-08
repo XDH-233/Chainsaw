@@ -29,7 +29,7 @@ case class Conv1DTop(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, dataWidth
   val PE1D:           PE           = PE(uic = uc, uoc = uoc, width = dataWidth)
   val accRAM1D:       AccRAM       = AccRAM(uoc = uoc, depth = Parameter.ofMapMaxOwOhSize1D, dataOutWidth = dataWidth)
   val loopCtrl1D: LoopCtrl1D =
-    LoopCtrl1D(uc = uc, uoc = uoc, readLatencyURAM = weightBuffer1D.pipeRegsCount, readLatencyBRAM = accRAM1D.pipeRegCount, PELatency = PE1D.PELatency)
+    LoopCtrl1D(uoc = uoc, readLatencyURAM = weightBuffer1D.pipeRegsCount, readLatencyBRAM = accRAM1D.pipeRegCount, PELatency = PE1D.PELatency)
   val pingPongRegs1D:   PingPongRegs1D   = PingPongRegs1D(dataWidth = dataWidth, uc = uc, uoc = uoc)
   val featureMapBuffer: FeatureMapBuffer = FeatureMapBuffer(width = dataWidth, depth = Parameter.featureMapDepth, uic = uoc)
 

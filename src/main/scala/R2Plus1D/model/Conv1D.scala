@@ -12,20 +12,20 @@ case class Conv1D(config: ConvConfig) {
   def ifMap2Mem(ifMap: Array[Array[Array[Array[Int]]]]): Array[Array[Int]] = {
     val ret = Array.fill(NicDUicCeil * ifMapSize)(Array.fill(Uic)(0))
     for (ic <- 0 until Nic; id <- 0 until Nid; ih <- 0 until Nihw; iw <- 0 until Nihw) {
-      val addr: Int = ic / Tc * Uic * ifMapSize + (ic % Tc) / Uic * ifMapSize + ih * Nid * Nihw + iw * Nid + id //
-      if (addr < ret.length)
-        ret(addr)(ic % Uic) = ifMap(ic)(id)(ih)(iw)
+      val ti = ic / Uic
+      val addr: Int = ti * ifMapSize + ih * Nid * Nihw + iw * Nid + id //
+      ret(addr)(ic % Uic) = ifMap(ic)(id)(ih)(iw)
     }
     ret
   }
 
   def weight2Mem(weight: Array[Array[Array[Int]]]): Array[Array[Array[Int]]] = {
-    val ret: Array[Array[Array[Int]]] = Array.fill(NicDTcCeil)(Array.fill(TcDUicCeil * NocDUocCeil * Uoc * kernelSize)(Array.fill(Uic)(0)))
+    val ret: Array[Array[Array[Int]]] = Array.fill(NocDTcCeil)(Array.fill(NicDUicCeil * TcDUocCeil * Uoc * kernelSize)(Array.fill(Uic)(0)))
     for (oc <- 0 until Noc; ic <- 0 until Nic; t <- 0 until K) {
-      val tc = ic / Tc
-      val ti = (ic % Tc) / Uic
-      val to = oc / Uoc
-      ret(tc)(to * TcDUicCeil * K * Uoc + ti * K * Uoc + t * Uoc + oc % Uoc)(ic % Uic) = weight(oc)(ic)(t)
+      val toc = oc / Tc
+      val ti  = ic / Uic
+      val to  = (oc % Tc) / Uoc
+      ret(toc)(to * NicDUicCeil * K * Uoc + ti * K * Uoc + t * Uoc + oc % Uoc)(ic % Uic) = weight(oc)(ic)(t)
     }
     ret
   }
@@ -33,33 +33,34 @@ case class Conv1D(config: ConvConfig) {
   def loopUnroll(ifMapMem: Array[Array[Int]], weightMem: Array[Array[Array[Int]]], printProcession: Boolean = true): Array[Array[Int]] = {
 
     val ofMapTile = Array.fill(NocDUocCeil * ofMapSize)(Array.fill(Uoc)(0))
+    for (toc <- 0 until NocDTcCeil) {
+      for (to <- 0 until TcDUocCeil) {
+        for (od <- 0 until Nod) {
 
-    for (to <- 0 until TcDUicCeil) {
-      for (od <- 0 until Nod) {
-        for (tc <- 0 until NicDTcCeil) {
-          val weightTile = weightMem(tc)
-          for (ti <- 0 until TcDUicCeil) {
-            if (tc * Tc + ti * Uic < NicDUicCeil * Uic) {
+          val weightTile = weightMem(toc)
+          for (ti <- 0 until NicDUicCeil) {
+            if (toc * Tc + to * Uoc < NocDUocCeil * Uoc) {
               for (k <- 0 until K) {
-                val weightAddrHead = to * TcDUicCeil * Uoc * K + ti * Uoc * K + k * Uoc
+                val weightAddrHead = to * NicDUicCeil * Uoc * K + ti * Uoc * K + k * Uoc
                 for (oh <- 0 until Nohw; ow <- 0 until Nohw) {
                   val id        = od * stride + k - padding
-                  val ifMapAddr = tc * TcDUicCeil * ifMapSize + ti * ifMapSize + oh * Nihw * Nid + ow * Nid + id
+                  val ifMapAddr = ti * ifMapSize + oh * Nihw * Nid + ow * Nid + id
                   println(ifMapAddr)
                   val ifMap     = if (id >= Nid || id < 0) Array.fill(Uic)(0) else ifMapMem(ifMapAddr)
                   val weight    = Array.tabulate(Uoc)(o => weightTile(weightAddrHead + o))
                   val psum      = PEArray(ifMap, weight)
-                  val ofMapAddr = to * ofMapSize + oh * Nohw * Nod + ow * Nod + od
+                  val ofMapAddr = toc * TcDUocCeil * ofMapSize + to * ofMapSize + oh * Nohw * Nod + ow * Nod + od
                   psum.zipWithIndex.foreach { case (p, i) => ofMapTile(ofMapAddr)(i) += p }
                   if (printProcession) {
                     println("-" * 100)
-                    printf(f"ow: $ow%-4d oh: $oh%-4d k: $k%-4d  ti: $ti%-4d tc: $tc%-4d od: $od%-4d to: $to%-4d\n")
+                    printf(f"ow: $ow%-4d oh: $oh%-4d k: $k%-4d  ti: $ti%-4d od: $od%-4d to: $to%-4d tc: $toc%-4d\n")
                     printf(f"id: $id%-4d ifAddr: $ifMapAddr%-4d weightAddrHead: $weightAddrHead%-4d ofMapAddr: $ofMapAddr%-4d\n")
                   }
                 }
               }
             }
           }
+
         }
       }
     }
@@ -80,7 +81,7 @@ case class Conv1D(config: ConvConfig) {
     ofMap
   }
 
-  def ofMap2Tile(ofMap: Array[Array[Array[Array[Int]]]]): Array[Array[Int]] = {
+  def ofMap2Mem(ofMap: Array[Array[Array[Array[Int]]]]): Array[Array[Int]] = {
     val ret = Array.fill(NocDUocCeil * ofMapSize)(Array.fill(Uoc)(0))
     for (oc <- 0 until Noc; od <- 0 until Nod; oh <- 0 until Nohw; ow <- 0 until Nohw) {
       ret(oc / Uoc * ofMapSize + oh * Nohw * Nod + ow * Nod + od)(oc % Uoc) = ofMap(oc)(od)(oh)(ow)

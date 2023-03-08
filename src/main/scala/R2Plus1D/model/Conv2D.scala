@@ -1,5 +1,6 @@
 package R2Plus1D.model
 import math.{ceil, sqrt}
+import scala.collection.mutable
 import scala.language.postfixOps
 import util.Random.nextInt
 
@@ -7,6 +8,8 @@ case class Conv2D(config: ConvConfig) {
   import config._
   val Nc = Noc
   val Uc = Uoc
+
+  val loopAndAddr: mutable.Map[Loop, AddrIndex] = scala.collection.mutable.Map[Loop, AddrIndex]()
 
   def randIfMap():  Array[Array[Array[Array[Int]]]] = Array.fill(Nic)(Array.fill(Nihw)(Array.fill(Nihw)(Array.fill(Nid)(nextInt(10)))))
   def randWeight(): Array[Array[Array[Array[Int]]]] = Array.fill(Nc)(Array.fill(Nic)(Array.fill(K)(Array.fill(K)(nextInt(10)))))
@@ -39,6 +42,7 @@ case class Conv2D(config: ConvConfig) {
                       val weight: Array[Array[Int]] = Array.tabulate(Uc)(o => weightTile(weightAddrHead + o)).reverse
                       val psum:   Array[Int]        = PEArray(ifMap, weight)
                       val ofAddr = ofMapAddr(tc, to, th, tw, sth, stw, od)
+                      loopAndAddr.put(Loop(tc, to, th, tw, ti, kr, ks, sth, stw, od), AddrIndex(ifAddr, weightAddrHead, ofAddr, ix, iy, ox, oy))
                       if (printProcession) {
                         println("-" * 100)
                         printf(
