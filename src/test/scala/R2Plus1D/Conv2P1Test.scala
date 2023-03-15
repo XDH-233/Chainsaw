@@ -10,9 +10,11 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class Conv2P1Test extends AnyFlatSpec {
 
-  " conv2p1 " should "run in high frequency" in MyVivadoAction(Conv2P1(), "conv_2_plus_1", SYNTH)
+  "conv2p1 place" should "run in high frequency" in MyVivadoAction(Conv2P1(), "conv2p1_place", IMPL)
 
-  val config2D: ConvConfig = ConvConfig(Uic = 4, Uoc = 8, Nic = 9, Tc = 16, Noc = 18, Nid = 2, Nihw = 2, K = 2, stride = 1, padding = 1, convType = ConvType.D2)
+  " conv2p1 synth" should "run in high frequency" in MyVivadoAction(Conv2P1(), "conv_2_plus_1", SYNTH)
+
+  val config2D: ConvConfig = ConvConfig(Uic = 4, Uoc = 8, Nic = 9, Tc = 16, Noc = 18, Nid = 2, Nihw = 5, K = 2, stride = 1, padding = 1, convType = ConvType.D2)
   val config1D: ConvConfig =
     ConvConfig(
       convType = ConvType.D1,
@@ -33,7 +35,8 @@ class Conv2P1Test extends AnyFlatSpec {
     Uic      = config2D.Uic,
     Uoc      = config1D.Uoc,
     Nic      = config2D.Nic,
-    Noc      = 9,
+    Tc       = 8,
+    Noc      = 8,
     Nihw     = config2D.Nihw,
     Nid      = config2D.Nid,
     K        = 1,
@@ -48,38 +51,41 @@ class Conv2P1Test extends AnyFlatSpec {
   val ifMapMem1D:  Array[Array[Int]]        = conv1D.ifMap2Mem(conv1D.randomIfMap)
   val weightMem1D: Array[Array[Array[Int]]] = conv1D.weight2Mem(conv1D.randomWeight)
 
-  val conv0D:      Conv0D            = model.Conv0D(config0D)
-  val ifMapMem0D:  Array[Array[Int]] = conv0D.ifMap2Mem(conv0D.randomIfMap)
-  val weightMem0D: Array[Array[Int]] = conv0D.weight2Mem(conv0D.randomWeight)
+  val conv0D:      Conv0D                   = model.Conv0D(config0D)
+  val ifMapMem0D:  Array[Array[Int]]        = conv0D.ifMap2Mem(conv0D.randomIfMap)
+  val weightMem0D: Array[Array[Array[Int]]] = conv0D.weight2Mem(conv0D.randomWeight)
 
   "patten3: Block0 1*1*1" should "work right" in pattenSim(
-    addition         = false,
-    shorCut          = true,
-    load1DTo0DBuffer = false,
-    print2D          = false,
-    print1D          = false,
-    print0D          = true
+    addition = false,
+    shorCut  = true,
+    stem     = false,
+    noNext0D = false,
+    print2D  = false,
+    print1D  = false,
+    print0D  = true
   )
 
   "patten2: Block0, no 1*1*1" should "work right" in pattenSim(
-    addition         = false,
-    shorCut          = false,
-    load1DTo0DBuffer = false,
-    print2D          = false,
-    print1D          = true,
-    print0D          = false
+    addition = false,
+    shorCut  = false,
+    stem     = false,
+    noNext0D = false,
+    print2D  = false,
+    print1D  = true,
+    print0D  = false
   )
 
   "patten1: stem conv" should "work right " in pattenSim(
-    addition         = false,
-    load1DTo0DBuffer = true,
-    shorCut          = false,
-    print2D          = false,
-    print1D          = true,
-    print0D          = false
+    addition = false,
+    stem     = true,
+    shorCut  = false,
+    noNext0D = false,
+    print2D  = true,
+    print1D  = false,
+    print0D  = false
   )
 
-  def pattenSim(shorCut: Boolean, addition: Boolean, load1DTo0DBuffer: Boolean, print2D: Boolean, print1D: Boolean, print0D: Boolean): Unit = {
+  def pattenSim(shorCut: Boolean, addition: Boolean, stem: Boolean, noNext0D: Boolean, print2D: Boolean, print1D: Boolean, print0D: Boolean): Unit = {
     println("-" * 20 + "2D config" + "-" * 20)
     config2D.display()
     println("-" * 20 + "0D config" + "-" * 20)
@@ -88,7 +94,7 @@ class Conv2P1Test extends AnyFlatSpec {
     config1D.display()
     conv2D.loopUnroll(ifMapMem2D, weightMem2D, print2D)
     conv1D.loopUnroll(ifMapMem1D, weightMem1D, print1D)
-//    conv0D.loopUnroll(ifMapMem0D, weightMem0D, print0D)
+    conv0D.loopUnroll(ifMapMem0D, weightMem0D, print0D)
 
     SimConfig.withFstWave
       .withConfig(
@@ -117,20 +123,20 @@ class Conv2P1Test extends AnyFlatSpec {
         dut
       }
       .doSim { dut =>
-        println(dut.PE1D.PELatency)
         import dut._
         import dut.loopCtrl2D.{tc, to, th, tw, ti, kr, ks, sth, stw, od}
         dut.clockDomain.forkStimulus(10)
         io.config2D.assignConfig(config2D)
         io.config1D.assignConfig(config1D)
         io.config0D.assignConfig(config0D)
-        io.shortCut              #= shorCut
-        io.weight2DRdy           #= false
-        io.weight1DRdy           #= false
-        io.fMapDDRLoadDone       #= false
-        io.newConv               #= false
-        io.load1DResInto0DBuffer #= load1DTo0DBuffer
-        io.addition              #= addition
+        io.shortCut        #= shorCut
+        io.weight2DRdy     #= false
+        io.weight1DRdy     #= false
+        io.fMapDDRLoadDone #= false
+        io.newConv         #= false
+        io.addition        #= addition
+        io.stem            #= stem
+        io.noNext0D        #= noNext0D
         clockDomain.waitSampling()
         io.newConv         #= true
         io.weight1DRdy     #= true
@@ -139,7 +145,7 @@ class Conv2P1Test extends AnyFlatSpec {
         clockDomain.waitSampling()
         io.newConv #= false
 
-        (0 until 1500).foreach { _ =>
+        (0 until 6000).foreach { _ =>
           clockDomain.waitSampling()
           val loop = model.Loop(
             tc.value.toBigInt,
@@ -156,7 +162,6 @@ class Conv2P1Test extends AnyFlatSpec {
           if (loopCtrl2D.io.ifMapRdEn.toBoolean & !loopCtrl2D.io.layerDone.toBoolean) {
             val addrAndIndex = conv2D.loopAndAddr(loop)
             assert(loopCtrl2D.io.ifMapAddr.toInt == addrAndIndex.ifAddr)
-
           }
         }
       }

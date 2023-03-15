@@ -11,7 +11,7 @@ import scala.language.postfixOps
 object MyVivadoAction {
   def apply[T <: Module](design: => T, name: String, flowType: EdaFlowType): VivadoReport = {
     val flow =
-      new VivadoFlow(design, flowType, XilinxDevice(UltraScale, "XCU250-FIGD2104-2L-E".toLowerCase, 300 MHz, None), name, new File(synthWorkspace, name))
+      new VivadoFlow(design, flowType, XilinxDevice(UltraScale, "XCU50-FSVH2104-2-E".toLowerCase, 300 MHz, None), name, new File(synthWorkspace, name))
     flow.doFlow()
   }
 }

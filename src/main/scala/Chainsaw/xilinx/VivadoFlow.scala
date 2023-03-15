@@ -86,7 +86,9 @@ class VivadoFlow[T <: Component](
     // generate xdc & tcl file
     val simpleLine = {
       val targetPeriod = xilinxDevice.fMax.toTime
-      s"""create_clock -period ${(targetPeriod * 1e9) toBigDecimal} [get_ports clk]"""
+      s"""create_clock -period ${(targetPeriod * 1e9) toBigDecimal} [get_ports clk]\n
+      add_cells_to_pblock pblock_dynamic_SLR0 [get_cells -hierarchical *SLR0*]
+      """
     }
     FileUtils.write(simpleXdcFile, simpleLine)
 
@@ -156,6 +158,7 @@ class VivadoFlow[T <: Component](
 
     def addImpl(): Unit = {
       script += "opt_design\n"
+
       script += "place_design -directive Explore\n"
       script += "report_timing\n"
       script += s"write_checkpoint -force ${topModuleName}_after_place.dcp\n"

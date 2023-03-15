@@ -17,8 +17,10 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
     val filled:          Bool = in Bool ()
     val weightAddrBase:  UInt = out UInt (log2Up(Parameter.weightBuffer2DDepth) bits)
     val weightLoadedNum: UInt = out UInt (log2Up(uc + 1) bits) setAsReg () init 0
-    val layerDone:       Bool = out Bool () setAsReg () init False
-    val toWriteDone:     Bool = out Bool () setAsReg () init False
+    val weightSwitch:    Bool = out Bool ()
+
+    val layerDone:   Bool = out Bool () setAsReg () init False
+    val toWriteDone: Bool = out Bool () setAsReg () init False
 
     val ifMapAddr:    SInt = out SInt (log2Up(Parameter.featureMapDepth) + 1 bits)
     val ifMapAddrVld: Bool = out Bool ()
@@ -38,7 +40,7 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
   loopAddr2D.io.loadConfig := io.loadConfig
   loopAddr2D.io.configIn.assignAllByName(io.config)
   val ifMapAddrTail: UInt =
-    RegNextWhen((io.config.Nihw + 1) * io.config.Nd + Mux(io.config.padding, (io.config.Nihw + 1) * io.config.Nd << 1, U(0)), io.loadConfig)
+    RegNextWhen((io.config.Nihw + 1) * io.config.Nd + Mux(io.config.padding, ((io.config.Nihw + 1) * io.config.Nd) << 1, U(0)), io.loadConfig)
 
   val tc:   GeneralCounter = GeneralCounter(step = U(1), top = io.config.NcDTcCeil, en = loopAddr2D.io.loadCounter)
   val tcNc: GeneralCounter = GeneralCounter(step = io.config.Tc, top = io.config.Nc, en = loopAddr2D.io.loadCounter)
@@ -130,9 +132,10 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
       .reduceBalancedTree(_ + _)
       .resize(log2Up(Parameter.weightBuffer2DDepth)),
     ksWeightAddr.willInc
-  ) init (0)
+  ) init 0
 
-//  io.weightAddrBase := Function.CounterSum(ksWeightAddr, krWeightAddr, tiWeightAddr, toWeightAddr).resized
+  io.weightSwitch := toWeightAddr.willOverFlow
+
   // weightLoadedNum
   when(io.loadConfig) {
     when(io.config.Nc >= uc) {
@@ -169,7 +172,7 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
   val ksIfMapAddr: GeneralCounter = GeneralCounter(step = io.config.Nd, top = loopAddr2D.io.NdTKrs, en = loopAddr2D.io.loadCounter)
   val sthIfMapAddr: GeneralCounter = GeneralCounter(
     step = loopAddr2D.io.NihwTNd + Mux(io.config.stride, loopAddr2D.io.NihwTNd, U(0)),
-    top  = loopAddr2D.io.NihwTNdTTow + Mux(io.config.stride, loopAddr2D.io.NihwTNdTTow << 1, U(0)),
+    top  = loopAddr2D.io.NihwTNdTTow + Mux(io.config.stride, loopAddr2D.io.NihwTNdTTow, U(0)),
     en   = loopAddr2D.io.loadCounter
   )
   val stwIfMapAddr: GeneralCounter = GeneralCounter(
@@ -225,7 +228,7 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
   val toOfMapAddr: GeneralCounter = GeneralCounter(step = io.config.ofMapSize, top = loopAddr2D.io.ofMapSizeTcDUcCeil, en = loopAddr2D.io.loadCounter)
   val tcOfMapAddr: GeneralCounter =
     GeneralCounter(step = loopAddr2D.io.ofMapSizeTcDUcCeil, top = loopAddr2D.io.NcDTcofMapSizeTcDUcCeil, en = loopAddr2D.io.loadCounter)
-  val ofMapAddrLatency: Int = readLatencyURAM + accLatency + PELatency
+  val ofMapAddrLatency: Int = readLatencyURAM + accLatency + PELatency - 1
   when(io.filled.d(ofMapAddrLatency)) {
     odOfMapAddr.inc()
   }
@@ -250,8 +253,8 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
     tcOfMapAddr.inc()
   }
 
-  io.ofMapAddr := Function.CounterSum(odOfMapAddr, stwOfMapAddr, sthOfMapAddr, twOfMapAddr, thOfMapAddr, toOfMapAddr, tcOfMapAddr).resized
-  io.ofMapAddrVld := (th.value + sth.value < loopAddr2D.io.configReg.Nohw & tw.value + stw.value < loopAddr2D.io.configReg.Nohw) d (readLatencyURAM + accLatency + PELatency)
+  io.ofMapAddr    := Function.CounterSum(odOfMapAddr, stwOfMapAddr, sthOfMapAddr, twOfMapAddr, thOfMapAddr, toOfMapAddr, tcOfMapAddr).resized
+  io.ofMapAddrVld := (th.value + sth.value < loopAddr2D.io.configReg.Nohw & tw.value + stw.value < loopAddr2D.io.configReg.Nohw) d (ofMapAddrLatency)
   // -------------------------------accRAM Addr-------------------------------------------------------------------------
   val accRAMAddrCounter: GeneralCounter =
     GeneralCounter(step = U(1), top = loopAddr2D.io.configReg.Nd * loopAddr2D.io.configReg.Tow * loopAddr2D.io.configReg.Toh, en = loopAddr2D.io.loadCounter)
@@ -261,8 +264,8 @@ case class LoopCtrl2D(uic: Int = Parameter.Uic, uc: Int = Parameter.Uc, readLate
   }
   io.writeAcc := io.ifMapRdEn.d(readLatencyURAM + PELatency)
   io.doutEn   := ti.willOverFlowIfInc.d(readLatencyURAM + PELatency)
-  io.ofMapWe  := ti.willOverFlowIfInc.d(readLatencyURAM + PELatency + accLatency)
-  io.ofMapBuffer2DRdy.setWhen((io.readDone & io.layerDone).d(readLatencyURAM + PELatency + accLatency))
+  io.ofMapWe  := ti.willOverFlowIfInc.d(ofMapAddrLatency)
+  io.ofMapBuffer2DRdy.setWhen((io.readDone & io.layerDone).d(ofMapAddrLatency))
   io.ofMapBuffer2DRdy.clearWhen(io.filled)
 
   io.toWriteDone := (to.willInc.d(readLatencyURAM + PELatency + accLatency))

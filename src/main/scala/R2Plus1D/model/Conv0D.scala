@@ -15,18 +15,24 @@ case class Conv0D(config: ConvConfig) {
     mem
   }
 
-  def weight2Mem(weight: Array[Array[Int]]): Array[Array[Int]] = {
-    val mem = Array.fill(NicDUicCeil * TcDUocCeil * Uoc)(Array.fill(Uic)(0))
+  def weight2Mem(weight: Array[Array[Int]]): Array[Array[Array[Int]]] = {
+    val mem =
+      Array.fill(NocDTcCeil)(Array.fill(NicDUicCeil * TcDUocCeil * Uoc)(Array.fill(Uic)(0))) // Array.fill(NicDUicCeil * TcDUocCeil * Uoc)(Array.fill(Uic)(0))
     for (oc <- 0 until Noc; ic <- 0 until Nic) {
-      mem((oc / Uoc) * NicDUicCeil * Uoc + (ic / Uic) * Uoc + oc % Uoc)(ic % Uic) = weight(oc)(ic)
+      val toc = oc / Tc
+      val to  = (oc % Tc) / Uoc
+      val ti  = ic / Uic
+      mem(toc)(to * NicDUicCeil * Uoc + ti * Uoc + oc % Uoc)(ic % Uic) = weight(oc)(ic)
     }
     mem
   }
 
   def ofMap2Mem(ofMap: Array[Array[Array[Array[Int]]]]): Array[Array[Int]] = {
-    val mem = Array.fill(TcDUocCeil * ofMapSize)(Array.fill(Uoc)(0))
+    val mem = Array.fill(NocDUocCeil * ofMapSize)(Array.fill(Uoc)(0))
     for (oc <- 0 until Noc; oh <- 0 until Nohw; ow <- 0 until Nohw; od <- 0 until Nod) {
-      mem((oc / Uoc) * ofMapSize + oh * Nohw * Nod + ow * Nod + od)(oc % Uoc) = ofMap(oc)(oh)(ow)(od)
+      val toc = oc / Tc
+      val to  = (oc % Tc) / Uoc
+      mem(toc * TcDUocCeil * ofMapSize + to * ofMapSize + oh * Nohw * Nod + ow * Nod + od)(oc % Uoc) = ofMap(oc)(oh)(ow)(od)
     }
     mem
   }
@@ -42,29 +48,33 @@ case class Conv0D(config: ConvConfig) {
     ofMap
   }
 
-  def loopUnroll(ifMapMem: Array[Array[Int]], weightMem: Array[Array[Int]], printProcession: Boolean = true): Array[Array[Int]] = {
-    val ofMapMem = Array.fill(Nohw * Nohw * Nod * TcDUocCeil)(Array.fill(Uoc)(0))
-    for (to <- 0 until TcDUocCeil) {
-      for (od <- 0 until Nod) {
-        for (ti <- 0 until NicDUicCeil) {
-          val weightAddrHead = to * NicDUicCeil * Uoc + ti * Uoc
-          for (oh <- 0 until Nohw; ow <- 0 until Nohw) {
-            val id        = od * 2
-            val iw        = ow * 2
-            val ih        = oh * 2
-            val ifMapAddr = ti * ifMapSize + ih * Nihw * Nid + iw * Nid + id
-            val ifMap     = ifMapMem(ifMapAddr)
-            val weight    = Array.tabulate(Uoc)(u => weightMem(weightAddrHead + u))
-            val sums      = weight.map(w => w.zip(ifMap).map { case (wp, i) => wp * i }.sum)
-            val ofMapAddr = to * ofMapSize + oh * Nohw * Nod + ow * Nod + od
-            sums.zipWithIndex.foreach { case (s, i) => ofMapMem(ofMapAddr)(i) += s }
-            if (printProcession) {
-              println("-" * 100)
-              printf(f"to: $to%-4d od: $od%-4d ti: $ti%-4d oh: $oh%-4d ow: $ow%-4d\n")
-              printf(f"ifMapAddr: $ifMapAddr%-4d weightAddrHead: $weightAddrHead%-4d ofMapAddr: $ofMapAddr%-4d\n")
+  def loopUnroll(ifMapMem: Array[Array[Int]], weightMem: Array[Array[Array[Int]]], printProcession: Boolean = true): Array[Array[Int]] = {
+    val ofMapMem = Array.fill(ofMapSize * NocDUocCeil)(Array.fill(Uoc)(0))
+    for (toc <- 0 until NocDTcCeil) {
+      val weightTile = weightMem(toc)
+      for (to <- 0 until TcDUocCeil) {
+        if (toc * Tc + to * Uoc < NocDUocCeil * Uoc)
+          for (od <- 0 until Nod) {
+            for (ti <- 0 until NicDUicCeil) {
+              val weightAddrHead = to * NicDUicCeil * Uoc + ti * Uoc
+              for (oh <- 0 until Nohw; ow <- 0 until Nohw) {
+                val id        = od * 2
+                val iw        = ow * 2
+                val ih        = oh * 2
+                val ifMapAddr = ti * ifMapSize + ih * Nihw * Nid + iw * Nid + id
+                val ifMap     = ifMapMem(ifMapAddr)
+                val weight    = Array.tabulate(Uoc)(u => weightTile(weightAddrHead + u))
+                val sums      = weight.map(w => w.zip(ifMap).map { case (wp, i) => wp * i }.sum)
+                val ofMapAddr = toc * TcDUocCeil * ofMapSize + to * ofMapSize + oh * Nohw * Nod + ow * Nod + od
+                sums.zipWithIndex.foreach { case (s, i) => ofMapMem(ofMapAddr)(i) += s }
+                if (printProcession) {
+                  println("-" * 100)
+                  printf(f"to: $to%-4d od: $od%-4d ti: $ti%-4d oh: $oh%-4d ow: $ow%-4d\n")
+                  printf(f"ifMapAddr: $ifMapAddr%-4d weightAddrHead: $weightAddrHead%-4d ofMapAddr: $ofMapAddr%-4d\n")
+                }
+              }
             }
           }
-        }
       }
     }
     ofMapMem

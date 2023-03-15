@@ -28,13 +28,13 @@ case class Conv2DTop(dataWidth: Int = 8, uic: Int = Uic, uc: Int = Uc, tc: Int =
     val configParaPorts: ConfigParaPorts2D = in(ConfigParaPorts2D())
   }
 
-  val PE2D:             PE               = PE(uic = uic, uoc = uc, width = dataWidth)
-  val weightBuffer2D:   WeightBuffer     = WeightBuffer(dataWidth = dataWidth, depth = weightBuffer2DDepth, uic = uic)
-  val featureMapBuffer: FeatureMapBuffer = FeatureMapBuffer(width = dataWidth, depth = featureMapDepth, uic = uic)
-  val pingPongRegs2D:   PingPongRegs2D   = PingPongRegs2D(width = dataWidth, uoc = uc, uic = uic)
-  val accRAM2D:         AccRAM           = AccRAM(uoc = uc, depth = uc)
-  val loopCtrl2D:       LoopCtrl2D       = LoopCtrl2D(uic = uic, uc = uc, PELatency = PE2D.PELatency, accLatency = accRAM2D.pipeRegCount)
-  val outputBuffer2D:   OutputBuffer     = OutputBuffer(dataWidth = dataWidth, uc = uc, depth = outputBuffer2DDepth)
+  val PE2D:             PE             = PE(uic = uic, uoc = uc, width = dataWidth)
+  val weightBuffer2D:   WeightBuffer   = WeightBuffer(dataWidth = dataWidth, depth = weightBuffer2DDepth, uic = uic)
+  val featureMapBuffer: InputBuffer2D  = InputBuffer2D(width = dataWidth, depth = featureMapDepth, uic = uic)
+  val pingPongRegs2D:   PingPongRegs2D = PingPongRegs2D(width = dataWidth, uoc = uc, uic = uic)
+  val accRAM2D:         AccRAM         = AccRAM(uoc = uc, depth = uc)
+  val loopCtrl2D:       LoopCtrl2D     = LoopCtrl2D(uic = uic, uc = uc, PELatency = PE2D.PELatency, accLatency = accRAM2D.pipeRegCount)
+  val outputBuffer2D:   OutputBuffer   = OutputBuffer(dataWidth = dataWidth, uc = uc, depth = outputBuffer2DDepth)
 
   // i0
   pingPongRegs2D.io.weightBufferRdy := io.weightBufferRdy

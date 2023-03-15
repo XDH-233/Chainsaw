@@ -3,7 +3,7 @@ package R2Plus1D.model
 class Conv0DTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   it should "work right" in {
-    val config = ConvConfig(Uic = 2, Nic = 3, Uoc = 2, Noc = 5, Nihw = 4, Nid = 2, K = 1, stride = 2, padding = 0, convType = ConvType.D0)
+    val config = ConvConfig(Uic = 2, Nic = 3, Uoc = 2, Noc = 5, Tc = 4, Nihw = 4, Nid = 2, K = 1, stride = 2, padding = 0, convType = ConvType.D0)
     config.display()
     val conv0D       = Conv0D(config)
     val ifMap        = conv0D.randomIfMap

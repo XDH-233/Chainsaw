@@ -12,26 +12,24 @@ case class LoopCtrl1D(
     PELatency:       Int
 ) extends Component {
   val io = new Bundle {
-    val loadConfig:       Bool              = in Bool ()
-    val config:           ConfigParaPorts1D = in(ConfigParaPorts1D())
-    val shortCut:         Bool              = in Bool ()
-    val toWriteDOne:      Bool              = in Bool ()
-    val ofMapBuffer2DRdy: Bool              = in Bool ()
-    val weightAddrBase:   UInt              = out UInt (log2Up(Parameter.weightBuffer1DDepth) bits)
-    val weightLoadedNum:  UInt              = out(UInt(log2Up(uoc + 1) bits)) setAsReg () init 0
-    val readDone:         Bool              = in Bool ()
-    val weightFilled:     Bool              = in Bool ()
-    val layerReadDone:    Bool              = out Bool () setAsReg () init False
-    val conv1DDone:       Bool              = out Bool () setAsReg () init (False)
-    val ifMapRdEn:        Bool              = out Bool ()
-    val ifMapAddr:        UInt              = out UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
-    val ifMapAddrVld:     Bool              = out Bool ()
+    val loadConfig:      Bool              = in Bool ()
+    val config:          ConfigParaPorts1D = in(ConfigParaPorts1D())
+    val shortCut:        Bool              = in Bool ()
+    val toWriteDOne:     Bool              = in Bool () // from loopCtrl2D
+    val weightAddrBase:  UInt              = out UInt (log2Up(Parameter.weightBuffer1DDepth) bits)
+    val weightLoadedNum: UInt              = out(UInt(log2Up(uoc + 1) bits)) setAsReg () init 0
+    val weightSwitch:    Bool              = out Bool ()
+    val readDone:        Bool              = in Bool ()
+    val weightFilled:    Bool              = in Bool ()
+    val conv1dDone:      Bool              = out Bool () setAsReg () init False
+    val ifMapRdEn:       Bool              = out Bool ()
+    val ifMapAddr:       UInt              = out UInt (log2Up(Parameter.outputBuffer2DDepth) bits)
+    val ifMapAddrVld:    Bool              = out Bool ()
 
-    val ofMapAddr:    UInt = out UInt (log2Up(Parameter.featureMapDepth) bits)
-    val ofMapWriteEn: Bool = out Bool ()
-    val writeAcc:     Bool = out Bool ()
-    val doutEn:       Bool = out Bool ()
-    val accAddr:      UInt = out UInt (log2Up(Parameter.ofMapMaxOwOhSize1D) bits)
+    val ofMapAddr: UInt = out UInt (log2Up(Parameter.featureMapDepth) bits)
+    val writeAcc:  Bool = out Bool ()
+    val doutEn:    Bool = out Bool ()
+    val accAddr:   UInt = out UInt (log2Up(Parameter.ofMapMaxOwOhSize1D) bits)
 
     val willOverflowIfInc: Bool = out Bool ()
   }
@@ -48,7 +46,7 @@ case class LoopCtrl1D(
   val ow:     GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nohw, en = io.loadConfig)
   val oh:     GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nohw, en = io.loadConfig)
   val kt:     GeneralCounter = GeneralCounter(step = U(1), top = io.config.Kt, en = io.loadConfig)
-  val ti:     GeneralCounter = GeneralCounter(step = U(1), top = io.config.TocDUocCeil, en = io.loadConfig)
+  val ti:     GeneralCounter = GeneralCounter(step = U(1), top = io.config.NicDUicCeil, en = io.loadConfig)
   val tiNc:   GeneralCounter = GeneralCounter(step = io.config.Uc, top = io.config.Nc, en = io.loadConfig)
   val od:     GeneralCounter = GeneralCounter(step = U(1), top = io.config.Nod, en = io.loadConfig)
   val to:     GeneralCounter = GeneralCounter(step = U(1), top = io.config.TocDUocCeil, en = io.loadConfig)
@@ -63,7 +61,7 @@ case class LoopCtrl1D(
   } elsewhen (io.willOverflowIfInc) {
     fMapFilled.clear()
   }
-  val owInc: Bool = fMapFilled | io.weightFilled
+  val owInc: Bool = (fMapFilled | io.weightFilled) & ~io.conv1dDone
 
   when(owInc) {
     ow.inc()
@@ -115,6 +113,7 @@ case class LoopCtrl1D(
     toWeightAddr.inc()
   }
   io.weightAddrBase := Function.CounterSum(ktWeightAddr, tiWeightAddr, toWeightAddr).resized
+  io.weightSwitch   := toWeightAddr.willOverFlow
   when(io.loadConfig) {
     when(io.config.Noc >= uoc) {
       io.weightLoadedNum := U(uoc)
@@ -126,8 +125,8 @@ case class LoopCtrl1D(
   ) & toNoc.value + (uoc * 2) >= loopAddr1D.io.configReg.Noc & ti.willOverFlowIfInc & od.willOverFlowIfInc & ktWeightAddr.willOverFlow) {
     io.weightLoadedNum := (loopAddr1D.io.configReg.Noc % U(uoc)).resized // FIXME %
   }
-  io.layerReadDone.setWhen(toNoc.valueNext + tocNoc.value >= loopAddr1D.io.NocDUocCeilTUoc & toNoc.willInc)
-  io.layerReadDone.clearWhen(io.loadConfig)
+  io.conv1dDone.setWhen(toNoc.value + uoc + tocNoc.value >= loopAddr1D.io.NocDUocCeilTUoc & toNoc.willInc)
+  io.conv1dDone.clearWhen(io.loadConfig)
   // ---------------------- if Map addr accumulation -------------------------------------------------------------------
 
   val owIfMapAddr: GeneralCounter =
@@ -195,13 +194,10 @@ case class LoopCtrl1D(
   when(toOfMapAddr.willOverFlow) {
     tocOfMapAddr.inc()
   }
-  io.ofMapWriteEn := ti.willOverFlowIfInc.d(ofMapLatency)
-  io.ofMapAddr    := Function.CounterSum(owOfMapAddr, ohOfMapAddr, odOfMapAddr, toOfMapAddr).resized
-  io.writeAcc     := io.weightFilled.d(fMapReadLatency + PELatency)
-  io.doutEn       := ti.willOverFlowIfInc.d(fMapReadLatency + PELatency)
-  io.accAddr      := (ow.value + oh.value * loopAddr1D.io.configReg.Nohw).d(fMapReadLatency + PELatency).resized
+  io.ofMapAddr := Function.CounterSum(owOfMapAddr, ohOfMapAddr, odOfMapAddr, toOfMapAddr).resized
+  io.writeAcc  := io.weightFilled.d(fMapReadLatency + PELatency)
+  io.doutEn    := (io.ifMapRdEn & ti.willOverFlowIfInc).d(fMapReadLatency + PELatency - 1)
+  io.accAddr   := (ow.value + oh.value * loopAddr1D.io.configReg.Nohw).d(fMapReadLatency + PELatency).resized
 
-  io.conv1DDone.setWhen(io.readDone & io.layerReadDone)
-  io.conv1DDone.clearWhen(io.loadConfig)
   io.willOverflowIfInc := ow.willOverFlowIfInc & oh.willOverFlowIfInc & kt.willOverFlowIfInc
 }

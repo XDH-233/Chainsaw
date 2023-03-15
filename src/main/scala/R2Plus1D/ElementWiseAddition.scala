@@ -22,15 +22,15 @@ case class ElementWiseAddition(
     val buffer0DRAddr: UInt      = out UInt (log2Up(depth) bits)
     val buffer0DRData: Vec[Bits] = in Vec (Bits(dataWidth bits), uoc)
 
-    val buffer0DWe:    Bool = out Bool ()
-    val buffer0DWData: Bits = out Bits (dataWidth * uoc bits)
-    val buffer0DWAddr: UInt = out UInt (log2Up(depth) bits)
+    val bufferWeOut:    Bool = out Bool ()
+    val bufferWDataOut: Bits = out Bits (dataWidth * uoc bits)
+    val bufferWAddrOut: UInt = out UInt (log2Up(depth) bits)
   }
   import Function._
   io.buffer0DRdEn  := io.ofMapWe1D & io.enable
   io.buffer0DRAddr := io.ofMapAddr
   val sums: Seq[SInt] = io.accRAMDout.d(readLatency).zip(io.buffer0DRData).map { case (acc, buf) => acc + buf.asSInt }
-  io.buffer0DWe    := io.buffer0DRdEn.d(readLatency) & io.enable
-  io.buffer0DWAddr := io.buffer0DRAddr.d(readLatency)
-  io.buffer0DWData := sums.map(_.relu(dataWidth)).map(_.asBits).reverse.reduce(_ ## _)
+  io.bufferWeOut    := io.buffer0DRdEn.d(readLatency) & io.enable
+  io.bufferWAddrOut := io.buffer0DRAddr.d(readLatency)
+  io.bufferWDataOut := sums.map(_.relu(dataWidth)).map(_.asBits).reverse.reduce(_ ## _)
 }

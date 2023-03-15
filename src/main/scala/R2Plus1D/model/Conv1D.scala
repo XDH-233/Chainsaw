@@ -45,7 +45,6 @@ case class Conv1D(config: ConvConfig) {
                 for (oh <- 0 until Nohw; ow <- 0 until Nohw) {
                   val id        = od * stride + k - padding
                   val ifMapAddr = ti * ifMapSize + oh * Nihw * Nid + ow * Nid + id
-                  println(ifMapAddr)
                   val ifMap     = if (id >= Nid || id < 0) Array.fill(Uic)(0) else ifMapMem(ifMapAddr)
                   val weight    = Array.tabulate(Uoc)(o => weightTile(weightAddrHead + o))
                   val psum      = PEArray(ifMap, weight)

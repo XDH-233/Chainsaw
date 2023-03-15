@@ -30,8 +30,8 @@ case class Conv1DTop(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, dataWidth
   val accRAM1D:       AccRAM       = AccRAM(uoc = uoc, depth = Parameter.ofMapMaxOwOhSize1D, dataOutWidth = dataWidth)
   val loopCtrl1D: LoopCtrl1D =
     LoopCtrl1D(uoc = uoc, readLatencyURAM = weightBuffer1D.pipeRegsCount, readLatencyBRAM = accRAM1D.pipeRegCount, PELatency = PE1D.PELatency)
-  val pingPongRegs1D:   PingPongRegs1D   = PingPongRegs1D(dataWidth = dataWidth, uc = uc, uoc = uoc)
-  val featureMapBuffer: FeatureMapBuffer = FeatureMapBuffer(width = dataWidth, depth = Parameter.featureMapDepth, uic = uoc)
+  val pingPongRegs1D:   PingPongRegs1D = PingPongRegs1D(dataWidth = dataWidth, uc = uc, uoc = uoc)
+  val featureMapBuffer: InputBuffer2D  = InputBuffer2D(width = dataWidth, depth = Parameter.featureMapDepth, uic = uoc)
 
   // io
   loopCtrl1D.io.config.assignAllByName(io.configPorts)
@@ -58,7 +58,7 @@ case class Conv1DTop(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, dataWidth
   pingPongRegs1D.io.weightAddrBase := loopCtrl1D.io.weightAddrBase
   pingPongRegs1D.io.weightLoadNum  := loopCtrl1D.io.weightLoadedNum
   loopCtrl1D.io.weightFilled       := pingPongRegs1D.io.weightFilled
-  pingPongRegs1D.io.layerDone      := loopCtrl1D.io.layerReadDone
+  pingPongRegs1D.io.layerDone      := loopCtrl1D.io.conv1dDone
 
   // output buffer 2D write
   outputBuffer2D.io.we    := io.we
@@ -80,7 +80,6 @@ case class Conv1DTop(uc: Int = Parameter.Uc, uoc: Int = Parameter.Uoc, dataWidth
   val weightOut: Seq[Vec[Bits]] = pingPongRegs1D.io.weightOut.toSeq.map(_.subdivideIn(dataWidth bits))
   PE1D.io.weight.zipWithIndex.foreach { case (p, i) => p := weightOut(i / uc)(i % uc).asSInt }
   // feature map write
-  featureMapBuffer.io.we    := loopCtrl1D.io.ofMapWriteEn
   featureMapBuffer.io.wData := accRAM1D.io.doutReLU
   featureMapBuffer.io.wAddr := loopCtrl1D.io.ofMapAddr
 

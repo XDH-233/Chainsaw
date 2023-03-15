@@ -3,13 +3,14 @@ import spinal.core._
 import scala.language.postfixOps
 import Chainsaw._
 
-case class AccRAM(uoc: Int = Parameter.Uc, dataWidth: Int = 26, pipeRegCount: Int = 2, dataOutWidth: Int = 8, depth: Int) extends Component {
+case class AccRAM(uoc: Int = Parameter.Uc, dataWidth: Int = 26, pipeRegCount: Int = 1, dataOutWidth: Int = 8, depth: Int) extends Component {
   val readLatency: Int = pipeRegCount + 1
   val io = new Bundle {
     val writeAcc: Bool      = in Bool ()
     val addr:     UInt      = in UInt (log2Up(depth) bits)
     val wData:    Vec[SInt] = in Vec (SInt(dataWidth bits), uoc)
     val doutEn:   Bool      = in Bool ()
+    val accWeOut: Bool      = out Bool ()
     val doutReLU: Bits      = out Bits (dataOutWidth * uoc bits)
     val douts:    Vec[SInt] = out Vec (SInt(dataWidth bits), uoc)
   }
@@ -25,4 +26,5 @@ case class AccRAM(uoc: Int = Parameter.Uc, dataWidth: Int = 26, pipeRegCount: In
   val sumsReLU: Seq[SInt] = sums.map(s => s.relu(dataOutWidth))
   io.doutReLU := Mux(io.doutEn.d(pipeRegCount), sumsReLU.map(_.asBits).reverse.reduce(_ ## _), B(0))
   io.douts    := sums
+  io.accWeOut := io.doutEn.d(readLatency)
 }

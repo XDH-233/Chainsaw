@@ -6,7 +6,7 @@ import spinal.lib._
 
 import scala.language.postfixOps
 
-case class FeatureMapBuffer(width: Int = 512, depth: Int = 50176, uic: Int = 36, pipeRegCount: Int = 4) extends Component {
+case class InputBuffer2D(width: Int = 512, depth: Int = 50176, uic: Int = 36, pipeRegCount: Int = 4) extends Component {
   val readLatency: Int = pipeRegCount + 1
   val io = new Bundle {
     val we:    Bool = in Bool ()

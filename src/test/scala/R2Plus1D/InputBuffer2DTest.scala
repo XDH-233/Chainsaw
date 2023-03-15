@@ -6,10 +6,10 @@ import scala.language.postfixOps
 import scala.util.Random.nextInt
 import Chainsaw._
 
-class FeatureMapBufferTest extends org.scalatest.flatspec.AnyFlatSpec {
+class InputBuffer2DTest extends org.scalatest.flatspec.AnyFlatSpec {
 
   "feature map buffer" should "consume right resource" in MyVivadoAction(
-    FeatureMapBuffer(width = 8, uic = 36, depth = 25 * 4 * 1024),
+    InputBuffer2D(width = 8, uic = 36, depth = 25 * 4 * 1024),
     "feature_map_buffer",
     SYNTH
   )
@@ -22,7 +22,7 @@ class FeatureMapBufferTest extends org.scalatest.flatspec.AnyFlatSpec {
       )
     )
     .compile {
-      val dut = FeatureMapBuffer(width = 8, uic = 2, pipeRegCount = 4)
+      val dut = InputBuffer2D(width = 8, uic = 2, pipeRegCount = 4)
       dut
     }
     .doSim { dut =>
